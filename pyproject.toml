@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "openlane_plugin_example"
+version = "0.1.0"  # Replace with actual version from __version__.py
+description = "Example plugin for OpenLane"
+authors = ["Efabless Corporation <donn@efabless.com>"]
+license = "Apache-2.0"
+classifiers = [
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Intended Audience :: Developers",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS :: MacOS X",
+]
+
+include = ["scripts/double_area.rb"]
+
+[tool.poetry.dependencies]
+python = ">=3.8"
+openlane = ">=2.0.9"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
