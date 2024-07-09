@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "openlane_plugin_example"
-version = "0.1.0"  # Replace with actual version from __version__.py
+version = "0.1.0"
 description = "Example plugin for OpenLane"
 authors = ["Efabless Corporation <donn@efabless.com>"]
 license = "Apache-2.0"

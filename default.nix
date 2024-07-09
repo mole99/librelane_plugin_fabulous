@@ -27,7 +27,7 @@
     ];
 
     propagatedBuildInputs =
-      includedTools
+      self.includedTools
       ++ [
         openlane
       ];

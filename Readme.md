@@ -8,10 +8,19 @@ open-source utility wiht a plugin.
 
 ## Testing this Plugin
 
-You can test this plugin by invoking:
+Checking if the plugin is recognized by OpenLane:
 
+```bash
+$ nix develop --command openlane --version
+[…]
+Discovered plugins:
+openlane_plugin_example -> 0.1.0
 ```
-nix develop --command openlane --flow FlowWithCustomAreaDoubler --run-example spm
+
+Testing that the added step and flow are working correctly:
+
+```bash
+$ nix develop --command openlane --flow FlowWithCustomAreaDoubler --run-example spm
 ```
 
 ## License
