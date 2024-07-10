@@ -9,30 +9,35 @@
   };
 
   inputs = {
-    openlane2.url = github:efabless/openlane2/overrides;
+    openlane2.url = github:efabless/openlane2/dev;
   };
 
   outputs = {
     self,
     openlane2,
     ...
-  }: {
+  }: let
+    nix-eda = openlane2.inputs.nix-eda;
+  in {
     # Outputs
     packages =
-      openlane2.inputs.nix-eda.forAllSystems {
+      nix-eda.forAllSystems {
         current = self;
         withInputs = [openlane2];
       } (utils:
-        with utils; rec {
-          openlane_plugin_example = callPythonPackage ./default.nix {};
-          default = openlane_plugin_example;
-        });
+        with utils; let
+          self = {
+            openlane-plugin-example = callPythonPackage ./default.nix {};
+            default = self.openlane-plugin-example;
+          };
+        in
+          self);
 
-    devShells = openlane2.inputs.nix-eda.forAllSystems {withInputs = [openlane2 self];} (utils:
+    devShells = nix-eda.forAllSystems {withInputs = [openlane2 self];} (utils:
       with utils; {
         default = callPackage (openlane2.createOpenLaneShell {
-          extra-python-packages = [
-            pkgs.openlane_plugin_example
+          openlane-plugins = [
+            pkgs.openlane-plugin-example
           ];
         }) {};
       });

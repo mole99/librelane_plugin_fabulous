@@ -63,11 +63,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1717940678,
-        "narHash": "sha256-GxEmeujXSw8ey3KXhQpYHKlZu/wJmeX4eS1UO8nLQ44=",
+        "lastModified": 1719837045,
+        "narHash": "sha256-ya2KEXKAIn8oYUi9G9TaUcQAEfGkbENCgXF/V0d/kws=",
         "owner": "efabless",
         "repo": "ioplace_parser",
-        "rev": "4849956df82b88f9290dc723b6da0ce91838a8e1",
+        "rev": "570fd3e352926f57e6eecbb8bd3892a5dec375b7",
         "type": "github"
       },
       "original": {
@@ -103,11 +103,11 @@
         "nixpkgs": "nixpkgs"
       },
       "locked": {
-        "lastModified": 1718284527,
-        "narHash": "sha256-J3Enh0VOQO9kW9xjSJmCly/6K4Jma8UL/LrCJd1/tP8=",
+        "lastModified": 1719830786,
+        "narHash": "sha256-meVPi2d6TI44FjuqQc57Ve3UV1GP12uDVrRfHcACBdg=",
         "owner": "efabless",
         "repo": "nix-eda",
-        "rev": "90f2333a2dd634fa3462b6b23a8c99d4132d340e",
+        "rev": "8fd46e08259a761d5078c6c3b8b19dd58bb69e75",
         "type": "github"
       },
       "original": {
@@ -142,16 +142,16 @@
         "volare": "volare"
       },
       "locked": {
-        "lastModified": 1719409571,
-        "narHash": "sha256-LbgJrC0q1m5ejCXhMKfoaFH6Cj7fH7JHw6wdPm/es/U=",
+        "lastModified": 1720540800,
+        "narHash": "sha256-n5bSO59P0+LjVoxGVVm9QMWHsqlb7qzVGfs3fkPc74c=",
         "owner": "efabless",
         "repo": "openlane2",
-        "rev": "772d1639b369af6cf6c254011fa46b74d1931705",
+        "rev": "81263fa752d529325796bd42343a4c8549366f09",
         "type": "github"
       },
       "original": {
         "owner": "efabless",
-        "ref": "overrides",
+        "ref": "dev",
         "repo": "openlane2",
         "type": "github"
       }
