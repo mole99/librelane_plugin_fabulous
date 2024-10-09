@@ -4,10 +4,10 @@
   nix-gitignore,
   poetry-core,
   setuptools,
-  ruby,
+  fabulous-fpga,
 }: let
   self = buildPythonPackage {
-    name = "openlane_plugin_example";
+    name = "openlane_plugin_fabulous";
 
     version = (builtins.fromTOML (builtins.readFile ./pyproject.toml)).tool.poetry.version;
 
@@ -23,7 +23,7 @@
     ];
 
     includedTools = [
-      ruby
+      fabulous-fpga
     ];
 
     propagatedBuildInputs =

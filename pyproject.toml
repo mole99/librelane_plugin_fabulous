@@ -1,8 +1,8 @@
 [tool.poetry]
-name = "openlane_plugin_example"
+name = "openlane_plugin_fabulous"
 version = "0.1.0"
-description = "Example plugin for OpenLane"
-authors = ["Efabless Corporation <donn@efabless.com>"]
+description = "FABulous plugin for OpenLane"
+authors = ["Leo Moser <leomoser99@gmail.com>"]
 license = "Apache-2.0"
 classifiers = [
     "License :: OSI Approved :: Apache Software License",
@@ -12,7 +12,10 @@ classifiers = [
     "Operating System :: MacOS :: MacOS X",
 ]
 
-include = ["scripts/double_area.rb"]
+include = [
+    "scripts/io_place.py",
+    "scripts/odb_power.py",
+]
 
 [tool.poetry.dependencies]
 python = ">=3.8"
