@@ -7,6 +7,9 @@ It provides two custom flows:
 - `FABulousTile` - Used to harden a tile or supertile.
 - `FABulousFabric` - Used to stitch the tiles into a fabric.
 
+> [!IMPORTANT]
+> For documentation about tile stitching, please see the [README](docs/README.md) in the docs.
+
 ## FABulousTile
 
 The `config.json` needs to be placed in the same directory as the `tile.csv` file.
