@@ -4,17 +4,17 @@ import shutil
 import pickle
 import fnmatch
 from decimal import Decimal
-from openlane.steps import Step, OdbpyStep, OpenROADStep
-from openlane.steps.step import (
+from librelane.steps import Step, OdbpyStep, OpenROADStep
+from librelane.steps.step import (
     ViewsUpdate,
     MetricsUpdate,
 )
-from openlane.steps.common_variables import io_layer_variables
-from openlane.flows import Flow, FlowError
-from openlane.state import DesignFormat, State
-from openlane.common import Path
-from openlane.config import Variable
-from openlane.logging import (
+from librelane.steps.common_variables import io_layer_variables
+from librelane.flows import Flow, FlowError
+from librelane.state import DesignFormat, State
+from librelane.common import Path
+from librelane.config import Variable
+from librelane.logging import (
     verbose,
     debug,
     info,
@@ -29,7 +29,7 @@ import pathlib
 
 from typing import Callable, List, Literal, Mapping, Tuple, Union, Optional, Dict, Any
 
-from openlane.steps import (
+from librelane.steps import (
     Yosys,
     OpenROAD,
     Magic,
@@ -41,7 +41,7 @@ from openlane.steps import (
     Misc,
 )
 
-from openlane.steps.common_variables import pdn_variables
+from librelane.steps.common_variables import pdn_variables
 
 __dir__ = os.path.dirname(os.path.abspath(__file__))
 
@@ -110,7 +110,7 @@ class FABulousPower(OdbpyStep):
         halo_left, halo_bottom, halo_right, halo_top = (HALO_SPACING[0], HALO_SPACING[1], HALO_SPACING[2], HALO_SPACING[3])
         print(f"{halo_left} {halo_bottom} {halo_right} {halo_top}")
         
-        if self.config["PDK"] in ["sky130"]:
+        if self.config["PDK"] in ["sky130A", "sky130B"]:
             core_voffset = 5.52
             core_hoffset = 10.88
         elif self.config["PDK"] in ["ihp-sg13g2"]:
@@ -135,16 +135,16 @@ class FABulousPower(OdbpyStep):
             halo_top,
             
             "--voffset",
-            self.config["FP_PDN_VOFFSET"],
+            self.config["PDN_VOFFSET"],
             "--vspacing",
-            self.config["FP_PDN_VSPACING"],
+            self.config["PDN_VSPACING"],
             "--vpitch",
-            self.config["FP_PDN_VPITCH"],
+            self.config["PDN_VPITCH"],
             "--vwidth",
-            self.config["FP_PDN_VWIDTH"],
+            self.config["PDN_VWIDTH"],
             
             "--metal-layer-name",
-            self.config["FP_PDN_VERTICAL_LAYER"],
+            self.config["PDN_VERTICAL_LAYER"],
             
             "--core-voffset",
             core_voffset,
@@ -185,7 +185,7 @@ class FABulousFabric(Classic):
         Variable(
             "FABULOUS_TILE_LIBRARY",
             Path,
-            "A path to the tile library.",
+            "The path to the tile library.",
         ),
         Variable(
             "FABULOUS_TILE_SPACING",
@@ -337,7 +337,7 @@ class FABulousFabric(Classic):
                 }
                 
                 for corner in self.config['FABULOUS_SPEF_CORNERS']:
-                    macros[macro_name]['spef'][f'{corner}_*'] = [ os.path.join(self.config['FABULOUS_TILE_LIBRARY'], macro_name, 'macro', self.config['PDK'], 'spef', corner, f'{macro_name}.{corner}.spef') ],
+                    macros[macro_name]['spef'][f'{corner}_*'] = [ os.path.join(self.config['FABULOUS_TILE_LIBRARY'], macro_name, 'macro', self.config['PDK'], 'spef', corner, f'{macro_name}.{corner}.spef') ]
 
             # Tile Placement
             TILE_SPACING = self.config["FABULOUS_TILE_SPACING"]
@@ -483,6 +483,8 @@ class FABulousFabric(Classic):
         self.config = self.config.copy(VERILOG_FILES=verilog_files)
 
         info(f'Setting VERILOG_FILES to {self.config["VERILOG_FILES"]}')
+
+        print(self.config)
 
         (final_state, steps) = super().run(initial_state, **kwargs)
         

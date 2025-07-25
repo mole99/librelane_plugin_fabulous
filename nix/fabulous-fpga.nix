@@ -6,9 +6,9 @@
   python-dotenv,
   loguru,
   fasm,
-  version ? "2.0.0+9e0fc1cf",
-  rev ? "9e0fc1cf9603c4d227b9a33d0a248b199daae763",
-  sha256 ? "sha256-1TPbrMlwLve2AbVSJc86PfJqB1RXGCHv9kLJpc+BK/c=",
+  version ? "2.0.0+b22eaa94",
+  rev ? "b22eaa94888480dcd424aeaa9cfaaebc77a15ce1",
+  sha256 ? "sha256-11bLT1nRHBCAVJCTjj6r84KiY6nGcU3csCwOhfBQNUg=",
 }: let
 
   self = buildPythonPackage {
@@ -35,8 +35,7 @@
       fasm
     ];
     
-    # Remove fasm, FABulous works without it
-    # but it can't generate bitstreams
+    # Remove the executables as they make problems with Nix?
     postPatch = ''
       substituteInPlace pyproject.toml \
         --replace "FABulous = \"FABulous.FABulous:main\"" ""

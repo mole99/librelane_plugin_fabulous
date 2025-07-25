@@ -1,13 +1,13 @@
 {
   buildPythonPackage,
-  openlane,
+  librelane,
   nix-gitignore,
   poetry-core,
   setuptools,
   fabulous-fpga,
 }: let
   self = buildPythonPackage {
-    name = "openlane_plugin_fabulous";
+    name = "librelane_plugin_fabulous";
 
     version = (builtins.fromTOML (builtins.readFile ./pyproject.toml)).tool.poetry.version;
 
@@ -29,7 +29,7 @@
     propagatedBuildInputs =
       self.includedTools
       ++ [
-        openlane
+        librelane
       ];
   };
 in

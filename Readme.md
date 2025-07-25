@@ -1,6 +1,6 @@
-# `openlane_plugin_fabulous`
+# `librelane_plugin_fabulous`
 
-This is a plugin for [OpenLane 2](https://github.com/efabless/openlane2) that integrates [FABulous](https://github.com/FPGA-Research/FABulous).
+This is a plugin for [LibreLane](https://github.com/librelane/librelane) that integrates [FABulous](https://github.com/FPGA-Research/FABulous).
 
 It provides two custom flows:
 
@@ -42,13 +42,13 @@ Enable a shell with the plugin:
 nix-shell
 ```
 
-Checking if the plugin is recognized by OpenLane:
+Checking if the plugin is recognized by LibreLane:
 
 ```bash
-$ nix develop --command openlane --version
+$ nix develop --command librelane --version
 […]
 Discovered plugins:
-openlane_plugin_fabulous -> 0.1.0
+librelane_plugin_fabulous -> 1.0.0
 ```
 
 ## License
