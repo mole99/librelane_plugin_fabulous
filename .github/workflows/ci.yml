@@ -27,7 +27,7 @@ jobs:
         shell: bash
         run: echo "NEW_TAG=NO_NEW_TAG" >> $GITHUB_ENV
       
-      - name: Check for new version
+      - name: Check for New Version
         if: ${{ github.event_name == 'push' && env.BRANCH_NAME == 'main' }}
         shell: bash
         run: |
