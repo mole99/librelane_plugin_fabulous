@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "librelane_plugin_fabulous"
-version = "1.0.0"
+version = "1.0.1"
 description = "FABulous plugin for LibreLane"
 authors = ["Leo Moser <leomoser99@gmail.com>"]
 license = "Apache-2.0"
