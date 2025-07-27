@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches:
+      main
+  # Manual Dispatch
+  workflow_dispatch:
+
+jobs:
+  tag:
+    runs-on: ubuntu-24.04
+    name: Create New Tag
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+      
+      - name: Set default for env.NEW_TAG
+        shell: bash
+        run: echo "NEW_TAG=NO_NEW_TAG" >> $GITHUB_ENV
+      
+      - name: Check for new version
+        if: ${{ github.event_name == 'push' && env.BRANCH_NAME == 'main' }}
+        shell: bash
+        run: |
+          python3 ./.github/scripts/generate_tag.py
+      
+      - name: Tag Commit
+        if: ${{ github.event_name == 'push' && env.BRANCH_NAME == 'main' }}
+        uses: tvdias/github-tagger@v0.0.1
+        with:
+          tag: "${{ env.NEW_TAG }}"
+          repo-token: "${{ secrets.BOT_GITHUB_TOKEN }}"
