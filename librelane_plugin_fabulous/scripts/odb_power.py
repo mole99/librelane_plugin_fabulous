@@ -16,52 +16,45 @@ import odb
 import click
 from reader import click_odb
 
+
+@click.option("--width", default=0, type=float, help="Width of macro in um")
+@click.option("--height", default=0, type=float, help="Height of macro in um")
+@click.option("--halo_left", default=0, type=float, help="Halo left in um")
+@click.option("--halo_bottom", default=0, type=float, help="Halo bottom in um")
+@click.option("--halo_right", default=0, type=float, help="Halo right in um")
+@click.option("--halo_top", default=0, type=float, help="Halo top in um")
+@click.option("--voffset", default=0, type=float, help="PDN vertical offset")
+@click.option("--vspacing", default=0, type=float, help="PDN vertical spacing")
+@click.option("--vpitch", default=0, type=float, help="PDN vertical pitch")
+@click.option("--vwidth", default=0, type=float, help="PDN vertical width")
 @click.option(
-    "--width", default=0, type=float, help="Width of macro in um"
+    "--metal-layer-name",
+    default=None,
+    type=str,
+    help="Metal layer for the vertical straps",
 )
 @click.option(
-    "--height", default=0, type=float, help="Height of macro in um"
+    "--core-voffset",
+    default=None,
+    type=float,
+    help="Die are to core area vertical offset",
 )
 @click.option(
-    "--halo_left", default=0, type=float, help="Halo left in um"
+    "--core-hoffset",
+    default=None,
+    type=float,
+    help="Die are to core area horizontal offset",
 )
 @click.option(
-    "--halo_bottom", default=0, type=float, help="Halo bottom in um"
-)
-@click.option(
-    "--halo_right", default=0, type=float, help="Halo right in um"
-)
-@click.option(
-    "--halo_top", default=0, type=float, help="Halo top in um"
-)
-@click.option(
-    "--voffset", default=0, type=float, help="PDN vertical offset"
-)
-@click.option(
-    "--vspacing", default=0, type=float, help="PDN vertical spacing"
-)
-@click.option(
-    "--vpitch", default=0, type=float, help="PDN vertical pitch"
-)
-@click.option(
-    "--vwidth", default=0, type=float, help="PDN vertical width"
-)
-@click.option(
-    "--metal-layer-name", default=None, type=str, help="Metal layer for the vertical straps"
-)
-@click.option(
-    "--core-voffset", default=None, type=float, help="Die are to core area vertical offset"
-)
-@click.option(
-    "--core-hoffset", default=None, type=float, help="Die are to core area horizontal offset"
-)
-@click.option(
-    "--tile-widths", default="", type=str, help="Tile widths of a row in the form: width;width;width"
+    "--tile-widths",
+    default="",
+    type=str,
+    help="Tile widths of a row in the form: width;width;width",
 )
 @click.command()
 @click_odb
 def power(
-    reader, 
+    reader,
     width: float,
     height: float,
     halo_left: float,
@@ -80,45 +73,47 @@ def power(
 
     macro_x_pos = 0
 
-    tile_widths = [int(float(tile_width) * 1000) for tile_width in tile_widths.split(';')]
+    tile_widths = [
+        int(float(tile_width) * 1000) for tile_width in tile_widths.split(";")
+    ]
     print(tile_widths)
 
     # Create ground / power nets
     tech = reader.db.getTech()
 
-    print(f'metal_layer_name: {metal_layer_name}')
+    print(f"metal_layer_name: {metal_layer_name}")
     metal_layer = tech.findLayer(metal_layer_name)
-    
-    for net_name, net_type in [('VPWR', 'POWER'), ('VGND', 'GROUND')]:
+
+    for net_name, net_type in [("VPWR", "POWER"), ("VGND", "GROUND")]:
         net = reader.block.findNet(net_name)
         if net is None:
             # Create net
             net = odb.dbNet.create(reader.block, net_name)
             net.setSpecial()
             net.setSigType(net_type)
-    
-    vpwr_net = reader.block.findNet('VPWR')
-    vgnd_net = reader.block.findNet('VGND')
-    
+
+    vpwr_net = reader.block.findNet("VPWR")
+    vgnd_net = reader.block.findNet("VGND")
+
     # Connect instance-iterms to power nets
     for blk_inst in reader.block.getInsts():
-        print(f'Instance: {blk_inst.getName()}')
+        print(f"Instance: {blk_inst.getName()}")
         for iterm in blk_inst.getITerms():
             iterm_name = iterm.getMTerm().getName()
 
-            if iterm_name == 'VPWR':
-                print('Connecting VPWR')
+            if iterm_name == "VPWR":
+                print("Connecting VPWR")
                 iterm.connect(vpwr_net)
-            
-            if iterm_name == 'VGND':
-                print('Connecting VGND')
+
+            if iterm_name == "VGND":
+                print("Connecting VGND")
                 iterm.connect(vgnd_net)
 
-    #vpwr_wire = vpwr_net.getSWires()[0]
-    #vgnd_wire = vgnd_net.getSWires()[0]
+    # vpwr_wire = vpwr_net.getSWires()[0]
+    # vgnd_wire = vgnd_net.getSWires()[0]
     vpwr_wire = odb.dbSWire.create(vpwr_net, "ROUTED")
     vgnd_wire = odb.dbSWire.create(vgnd_net, "ROUTED")
-    
+
     vpwr_bterm = odb.dbBTerm.create(vpwr_net, "VPWR")
     vpwr_bterm.setIoType("INOUT")
     vpwr_bterm.setSigType(vpwr_net.getSigType())
@@ -165,42 +160,66 @@ def power(
     cur_x = halo_left
     for tile_width in tile_widths:
         print(f"tile_width: {tile_width}")
-    
+
         print(f"cur_x: {cur_x/1000}")
 
         cur_x_tile = 0
         cur_x_tile += voffset + core_voffset
-        while cur_x_tile < (tile_width-core_voffset):
-            
+        while cur_x_tile < (tile_width - core_voffset):
+
             # VPWR
-            if (tile_width-core_voffset) - cur_x_tile > vwidth//2:
-                x_vpwr_left = cur_x + cur_x_tile - vwidth//2
-                x_vpwr_right = cur_x + cur_x_tile + vwidth//2
-                
-                print(x_vpwr_left/1000)
-                print(x_vpwr_right/1000)
-                
-                print(f'{type(vpwr_wire)}, {type(metal_layer)}, {type(x_vpwr_left)}, {type(ymin)}, {type(x_vpwr_right)}, {type(ymax)}, {type("STRIPE")}')
-                print(f'{vpwr_wire}, {metal_layer}, {x_vpwr_left}, {ymin}, {x_vpwr_right}, {ymax}, {"STRIPE"}')
-                
-                odb.dbSBox_create(vpwr_wire, metal_layer, x_vpwr_left, ymin, x_vpwr_right, ymax, "STRIPE")
-                odb.dbBox_create(vpwr_bpin, metal_layer, x_vpwr_left, ymin, x_vpwr_right, ymax)
-        
+            if (tile_width - core_voffset) - cur_x_tile > vwidth // 2:
+                x_vpwr_left = cur_x + cur_x_tile - vwidth // 2
+                x_vpwr_right = cur_x + cur_x_tile + vwidth // 2
+
+                print(x_vpwr_left / 1000)
+                print(x_vpwr_right / 1000)
+
+                print(
+                    f'{type(vpwr_wire)}, {type(metal_layer)}, {type(x_vpwr_left)}, {type(ymin)}, {type(x_vpwr_right)}, {type(ymax)}, {type("STRIPE")}'
+                )
+                print(
+                    f'{vpwr_wire}, {metal_layer}, {x_vpwr_left}, {ymin}, {x_vpwr_right}, {ymax}, {"STRIPE"}'
+                )
+
+                odb.dbSBox_create(
+                    vpwr_wire,
+                    metal_layer,
+                    x_vpwr_left,
+                    ymin,
+                    x_vpwr_right,
+                    ymax,
+                    "STRIPE",
+                )
+                odb.dbBox_create(
+                    vpwr_bpin, metal_layer, x_vpwr_left, ymin, x_vpwr_right, ymax
+                )
+
             cur_x_tile += vwidth + vspacing
-            
+
             # VGND
-            if (tile_width-core_voffset) - cur_x_tile > vwidth//2:
-                x_vgnd_left = cur_x + cur_x_tile - vwidth//2
-                x_vgnd_right = cur_x + cur_x_tile + vwidth//2
-                
-                print(x_vgnd_left/1000)
-                print(x_vgnd_right/1000)
-                
-                odb.dbSBox_create(vgnd_wire, metal_layer, x_vgnd_left, ymin, x_vgnd_right, ymax, "STRIPE")
-                odb.dbBox_create(vgnd_bpin, metal_layer, x_vgnd_left, ymin, x_vgnd_right, ymax)
-            
+            if (tile_width - core_voffset) - cur_x_tile > vwidth // 2:
+                x_vgnd_left = cur_x + cur_x_tile - vwidth // 2
+                x_vgnd_right = cur_x + cur_x_tile + vwidth // 2
+
+                print(x_vgnd_left / 1000)
+                print(x_vgnd_right / 1000)
+
+                odb.dbSBox_create(
+                    vgnd_wire,
+                    metal_layer,
+                    x_vgnd_left,
+                    ymin,
+                    x_vgnd_right,
+                    ymax,
+                    "STRIPE",
+                )
+                odb.dbBox_create(
+                    vgnd_bpin, metal_layer, x_vgnd_left, ymin, x_vgnd_right, ymax
+                )
+
             cur_x_tile += vpitch - vspacing - vwidth
-            
+
         cur_x += tile_width
 
         print(f"cur_x: {cur_x/1000}")
@@ -208,5 +227,6 @@ def power(
     vpwr_bpin.setPlacementStatus("FIRM")
     vgnd_bpin.setPlacementStatus("FIRM")
 
+
 if __name__ == "__main__":
-  power()
+    power()

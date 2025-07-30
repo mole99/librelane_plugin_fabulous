@@ -50,6 +50,7 @@ from FABulous.fabric_definition.Port import Port
 __dir__ = os.path.dirname(os.path.abspath(__file__))
 _migrate_unmatched_io = lambda x: "unmatched_design" if x else "none"
 
+
 @Step.factory.register()
 class FABulousIOPlacement(OdbpyStep):
     """
@@ -142,14 +143,15 @@ class FABulousIOPlacement(OdbpyStep):
             return {}, {}
         return super().run(state_in, **kwargs)
 
+
 Classic = Flow.factory.get("Classic")
+
 
 @Flow.factory.register()
 class FABulousTile(Classic):
     Substitutions = [
         # Replace with FABulous IO Placement
         ("Odb.CustomIOPlacement", FABulousIOPlacement),
-        
         # Disable STA
         ("OpenROAD.STAPrePNR", None),
         ("OpenROAD.STAMidPNR", None),
@@ -158,14 +160,14 @@ class FABulousTile(Classic):
         ("OpenROAD.STAMidPNR", None),
         ("OpenROAD.STAPostPNR", None),
     ]
-    
+
     config_vars = Classic.config_vars + [
         Variable(
             "FABULOUS_EXTERNAL_SIDE",
             Optional[Literal["N", "E", "S", "W"]],
             """
             The side of the macro at which the external pins are placed.
-            """
+            """,
         ),
         Variable(
             "FABULOUS_SUPERTILE",
@@ -173,7 +175,7 @@ class FABulousTile(Classic):
             """
             Is the tile a supertile?
             """,
-            default = False,
+            default=False,
         ),
         Variable(
             "FABULOUS_TILE_DIR",
@@ -182,7 +184,6 @@ class FABulousTile(Classic):
             Path to the tile directory where the CSV file is located.
             """,
         ),
-        
     ]
 
     def run(
@@ -194,73 +195,86 @@ class FABulousTile(Classic):
 
         info(f"VERILOG_FILES: {self.config['VERILOG_FILES']}")
         info(f"FABULOUS_TILE_DIR: {self.config['FABULOUS_TILE_DIR']}")
-        
-        verilog_files = self.config['VERILOG_FILES']
+
+        verilog_files = self.config["VERILOG_FILES"]
 
         # Create a dummy fabric
         # TODO FABulous should be able to create tiles without a fabric
-        csv_file = os.path.join(self.run_dir, 'fabric.csv')
-        
+        csv_file = os.path.join(self.run_dir, "fabric.csv")
+
         # If supertile get the individual tiles
         supertile_tiles = []
         if self.config["FABULOUS_SUPERTILE"]:
-            with open(os.path.join(self.config["FABULOUS_TILE_DIR"], self.config["DESIGN_NAME"] + ".csv"), 'r') as f:
-                f.readline() # Skip SuperTILE header
-                
-                while 'EndSuperTILE' not in (line := f.readline()):
+            with open(
+                os.path.join(
+                    self.config["FABULOUS_TILE_DIR"],
+                    self.config["DESIGN_NAME"] + ".csv",
+                ),
+                "r",
+            ) as f:
+                f.readline()  # Skip SuperTILE header
+
+                while "EndSuperTILE" not in (line := f.readline()):
                     line = line.strip()
-                    tiles = line.split(',')
+                    tiles = line.split(",")
                     for tile in tiles:
-                        if tile != '':
+                        if tile != "":
                             supertile_tiles.append(tile)
-        
-        print(f'supertile_tiles: {supertile_tiles}')
-        
-        with open(csv_file, 'w') as f:
-            f.write('FabricBegin\n')
+
+        print(f"supertile_tiles: {supertile_tiles}")
+
+        with open(csv_file, "w") as f:
+            f.write("FabricBegin\n")
 
             name = self.config["DESIGN_NAME"]
 
             # Only 1x2 supported for now
             if self.config["FABULOUS_SUPERTILE"]:
                 for tile in supertile_tiles:
-                    f.write(f'{tile}\n')
+                    f.write(f"{tile}\n")
             else:
-                f.write(f'{name}\n')
+                f.write(f"{name}\n")
 
-            f.write('FabricEnd\n')
-            f.write('ParametersBegin\n')
+            f.write("FabricEnd\n")
+            f.write("ParametersBegin\n")
 
-            f.write('ConfigBitMode,frame_based\n') # default is FlipFlopChain
-            f.write('GenerateDelayInSwitchMatrix,80\n')
-            f.write('MultiplexerStyle,custom\n')
-            f.write('SuperTileEnable,{"TRUE" if self.config["FABULOUS_SUPERTILE"] else "FALSE"}\n') # TRUE/FALSE
-            
-            
+            f.write("ConfigBitMode,frame_based\n")  # default is FlipFlopChain
+            f.write("GenerateDelayInSwitchMatrix,80\n")
+            f.write("MultiplexerStyle,custom\n")
+            f.write(
+                'SuperTileEnable,{"TRUE" if self.config["FABULOUS_SUPERTILE"] else "FALSE"}\n'
+            )  # TRUE/FALSE
+
             if self.config["FABULOUS_SUPERTILE"]:
                 for tile in supertile_tiles:
-                    f.write(f'Tile,{os.path.abspath(os.path.join(self.config["FABULOUS_TILE_DIR"], tile, f"{tile}.csv"))}\n')
-                f.write(f'Supertile,{os.path.abspath(os.path.join(self.config["FABULOUS_TILE_DIR"], self.config["DESIGN_NAME"] + ".csv"))}\n')
+                    f.write(
+                        f'Tile,{os.path.abspath(os.path.join(self.config["FABULOUS_TILE_DIR"], tile, f"{tile}.csv"))}\n'
+                    )
+                f.write(
+                    f'Supertile,{os.path.abspath(os.path.join(self.config["FABULOUS_TILE_DIR"], self.config["DESIGN_NAME"] + ".csv"))}\n'
+                )
             else:
-                f.write(f'Tile,{os.path.abspath(os.path.join(self.config["FABULOUS_TILE_DIR"], self.config["DESIGN_NAME"] + ".csv"))}\n')
-            
-            f.write('ParametersEnd\n')
-        
+                f.write(
+                    f'Tile,{os.path.abspath(os.path.join(self.config["FABULOUS_TILE_DIR"], self.config["DESIGN_NAME"] + ".csv"))}\n'
+                )
+
+            f.write("ParametersEnd\n")
+
         # Unfortunately necessary
-        os.environ["FAB_PROJ_DIR"] = '.'
-        
+        os.environ["FAB_PROJ_DIR"] = "."
+
         self.writer = VerilogCodeGenerator()
         self.fabric = parse_csv.parseFabricCSV(pathlib.Path(csv_file))
-        self.fabric.name = 'fabulous_fabric'
-        
+        self.fabric.name = "fabulous_fabric"
+
         tileByFabric = list(self.fabric.tileDic.keys())
         superTileByFabric = list(self.fabric.superTileDic.keys())
         allTile = list(set(tileByFabric + superTileByFabric))
 
-        info(f'Tiles used by fabric: {allTile}')
+        info(f"Tiles used by fabric: {allTile}")
 
         is_supertile = False
-        if self.config['DESIGN_NAME'] in self.fabric.superTileDic:
+        if self.config["DESIGN_NAME"] in self.fabric.superTileDic:
             is_supertile = True
 
         # Ports for pin placement
@@ -271,26 +285,71 @@ class FABulousTile(Classic):
 
         if not is_supertile:
 
-            tile = self.fabric.getTileByName(self.config['DESIGN_NAME'])
+            tile = self.fabric.getTileByName(self.config["DESIGN_NAME"])
 
             # Gen switch matrix
-            self.writer.outFileName = pathlib.Path(os.path.join(self.config["FABULOUS_TILE_DIR"], f"{self.config['DESIGN_NAME']}_switch_matrix.v"))
-            genTileSwitchMatrix(self.writer, self.fabric, tile, switch_matrix_debug_signal=False)
-            verilog_files.append(os.path.join(self.config["FABULOUS_TILE_DIR"], f"{self.config['DESIGN_NAME']}_switch_matrix.v"))
+            self.writer.outFileName = pathlib.Path(
+                os.path.join(
+                    self.config["FABULOUS_TILE_DIR"],
+                    f"{self.config['DESIGN_NAME']}_switch_matrix.v",
+                )
+            )
+            genTileSwitchMatrix(
+                self.writer, self.fabric, tile, switch_matrix_debug_signal=False
+            )
+            verilog_files.append(
+                os.path.join(
+                    self.config["FABULOUS_TILE_DIR"],
+                    f"{self.config['DESIGN_NAME']}_switch_matrix.v",
+                )
+            )
 
             # Gen config mem
-            self.writer.outFileName = pathlib.Path(os.path.join(self.config["FABULOUS_TILE_DIR"], f"{self.config['DESIGN_NAME']}_ConfigMem.v"))
-            generateConfigMem(self.writer, self.fabric, tile, pathlib.Path(os.path.join(self.config["FABULOUS_TILE_DIR"], f"{self.config['DESIGN_NAME']}_ConfigMem.csv")))
-            
+            self.writer.outFileName = pathlib.Path(
+                os.path.join(
+                    self.config["FABULOUS_TILE_DIR"],
+                    f"{self.config['DESIGN_NAME']}_ConfigMem.v",
+                )
+            )
+            generateConfigMem(
+                self.writer,
+                self.fabric,
+                tile,
+                pathlib.Path(
+                    os.path.join(
+                        self.config["FABULOUS_TILE_DIR"],
+                        f"{self.config['DESIGN_NAME']}_ConfigMem.csv",
+                    )
+                ),
+            )
+
             # Termination tiles have no config bits, therefore no config mem is generated
-            if pathlib.Path(os.path.join(self.config["FABULOUS_TILE_DIR"], f"{self.config['DESIGN_NAME']}_ConfigMem.csv")).exists():
-                verilog_files.append(os.path.join(self.config["FABULOUS_TILE_DIR"], f"{self.config['DESIGN_NAME']}_ConfigMem.v"))
+            if pathlib.Path(
+                os.path.join(
+                    self.config["FABULOUS_TILE_DIR"],
+                    f"{self.config['DESIGN_NAME']}_ConfigMem.csv",
+                )
+            ).exists():
+                verilog_files.append(
+                    os.path.join(
+                        self.config["FABULOUS_TILE_DIR"],
+                        f"{self.config['DESIGN_NAME']}_ConfigMem.v",
+                    )
+                )
 
             # Gen tile
             info(f"Generating tile {self.config['DESIGN_NAME']}")
-            self.writer.outFileName = pathlib.Path(os.path.join(self.config["FABULOUS_TILE_DIR"], f"{self.config['DESIGN_NAME']}.v"))
+            self.writer.outFileName = pathlib.Path(
+                os.path.join(
+                    self.config["FABULOUS_TILE_DIR"], f"{self.config['DESIGN_NAME']}.v"
+                )
+            )
             generateTile(self.writer, self.fabric, tile)
-            verilog_files.append(os.path.join(self.config["FABULOUS_TILE_DIR"], f"{self.config['DESIGN_NAME']}.v"))
+            verilog_files.append(
+                os.path.join(
+                    self.config["FABULOUS_TILE_DIR"], f"{self.config['DESIGN_NAME']}.v"
+                )
+            )
             info(f"Generated tile {self.config['DESIGN_NAME']}")
 
             info(tile)
@@ -302,120 +361,138 @@ class FABulousTile(Classic):
 
             # Check external pins side
             for bel in tile.bels:
-                if (bel.externalInput or bel.externalOutput) and not self.config['FABULOUS_EXTERNAL_SIDE']:
-                    err('Please specify FABULOUS_EXTERNAL_SIDE')
+                if (bel.externalInput or bel.externalOutput) and not self.config[
+                    "FABULOUS_EXTERNAL_SIDE"
+                ]:
+                    err("Please specify FABULOUS_EXTERNAL_SIDE")
 
             # Get the ports for the tile
-            
+
             # NORTH ports
             north_ports = []
-            
-            if self.config['FABULOUS_EXTERNAL_SIDE'] == 'N':
+
+            if self.config["FABULOUS_EXTERNAL_SIDE"] == "N":
                 for bel in tile.bels:
                     info(bel.inputs)
                     info(bel.outputs)
                     info(bel.externalInput)
                     info(bel.externalOutput)
-                    
+
                     north_ports.extend(bel.externalInput)
                     north_ports.extend(bel.externalOutput)
 
-            for port in [port for port in tile.getNorthSidePorts() if port.inOut == IO.OUTPUT]:
+            for port in [
+                port for port in tile.getNorthSidePorts() if port.inOut == IO.OUTPUT
+            ]:
                 if port.wireCount * abs(port.yOffset) > 1:
-                    north_ports.append(f'{port.name}\\[.*\\]')
+                    north_ports.append(f"{port.name}\\[.*\\]")
                 else:
                     north_ports.append(port.name)
-    
-            for port in [port for port in tile.getNorthSidePorts() if port.inOut == IO.INPUT]:
+
+            for port in [
+                port for port in tile.getNorthSidePorts() if port.inOut == IO.INPUT
+            ]:
                 if port.wireCount * abs(port.yOffset) > 1:
-                    north_ports.append(f'{port.name}\\[.*\\]')
+                    north_ports.append(f"{port.name}\\[.*\\]")
                 else:
                     north_ports.append(port.name)
-            
-            north_ports.append('UserCLKo')
-            north_ports.append('FrameStrobe_O\\[.*\\]')
-            
+
+            north_ports.append("UserCLKo")
+            north_ports.append("FrameStrobe_O\\[.*\\]")
+
             # EAST ports
             east_ports = []
-            
-            if self.config['FABULOUS_EXTERNAL_SIDE'] == 'E':
+
+            if self.config["FABULOUS_EXTERNAL_SIDE"] == "E":
                 for bel in tile.bels:
                     info(bel.inputs)
                     info(bel.outputs)
                     info(bel.externalInput)
                     info(bel.externalOutput)
-                    
+
                     east_ports.extend(bel.externalInput)
                     east_ports.extend(bel.externalOutput)
 
-            for port in [port for port in tile.getEastSidePorts() if port.inOut == IO.INPUT]:
+            for port in [
+                port for port in tile.getEastSidePorts() if port.inOut == IO.INPUT
+            ]:
                 if port.wireCount * abs(port.xOffset) > 1:
-                    east_ports.append(f'{port.name}\\[.*\\]')
+                    east_ports.append(f"{port.name}\\[.*\\]")
                 else:
                     east_ports.append(port.name)
-    
-            for port in [port for port in tile.getEastSidePorts() if port.inOut == IO.OUTPUT]:
+
+            for port in [
+                port for port in tile.getEastSidePorts() if port.inOut == IO.OUTPUT
+            ]:
                 if port.wireCount * abs(port.xOffset) > 1:
-                    east_ports.append(f'{port.name}\\[.*\\]')
+                    east_ports.append(f"{port.name}\\[.*\\]")
                 else:
                     east_ports.append(port.name)
-            
-            east_ports.append(f'FrameData_O\\[.*\\]')
-            
+
+            east_ports.append(f"FrameData_O\\[.*\\]")
+
             # SOUTH ports
             south_ports = []
-            
-            if self.config['FABULOUS_EXTERNAL_SIDE'] == 'S':
+
+            if self.config["FABULOUS_EXTERNAL_SIDE"] == "S":
                 for bel in tile.bels:
                     info(bel.inputs)
                     info(bel.outputs)
                     info(bel.externalInput)
                     info(bel.externalOutput)
-                    
+
                     south_ports.extend(bel.externalInput)
                     south_ports.extend(bel.externalOutput)
 
-            for port in [port for port in tile.getSouthSidePorts() if port.inOut == IO.INPUT]:
+            for port in [
+                port for port in tile.getSouthSidePorts() if port.inOut == IO.INPUT
+            ]:
                 if port.wireCount * abs(port.yOffset) > 1:
-                    south_ports.append(f'{port.name}\\[.*\\]')
+                    south_ports.append(f"{port.name}\\[.*\\]")
                 else:
                     south_ports.append(port.name)
-    
-            for port in [port for port in tile.getSouthSidePorts() if port.inOut == IO.OUTPUT]:
+
+            for port in [
+                port for port in tile.getSouthSidePorts() if port.inOut == IO.OUTPUT
+            ]:
                 if port.wireCount * abs(port.yOffset) > 1:
-                    south_ports.append(f'{port.name}\\[.*\\]')
+                    south_ports.append(f"{port.name}\\[.*\\]")
                 else:
                     south_ports.append(port.name)
-            
-            south_ports.append('UserCLK')
-            south_ports.append('FrameStrobe\\[.*\\]')
-            
+
+            south_ports.append("UserCLK")
+            south_ports.append("FrameStrobe\\[.*\\]")
+
             # WEST ports
             west_ports = []
-            
-            if self.config['FABULOUS_EXTERNAL_SIDE'] == 'W':
+
+            if self.config["FABULOUS_EXTERNAL_SIDE"] == "W":
                 for bel in tile.bels:
                     info(bel.inputs)
                     info(bel.outputs)
                     info(bel.externalInput)
                     info(bel.externalOutput)
-                    
+
                     west_ports.extend(bel.externalInput)
                     west_ports.extend(bel.externalOutput)
 
-            for port in [port for port in tile.getWestSidePorts() if port.inOut == IO.OUTPUT]:
+            for port in [
+                port for port in tile.getWestSidePorts() if port.inOut == IO.OUTPUT
+            ]:
                 if port.wireCount * abs(port.xOffset) > 1:
-                    west_ports.append(f'{port.name}\\[.*\\]')
+                    west_ports.append(f"{port.name}\\[.*\\]")
                 else:
                     west_ports.append(port.name)
-    
-            for port in [port for port in tile.getWestSidePorts() if port.inOut == IO.INPUT]:
+
+            for port in [
+                port for port in tile.getWestSidePorts() if port.inOut == IO.INPUT
+            ]:
                 if port.wireCount * abs(port.xOffset) > 1:
-                    west_ports.append(f'{port.name}\\[.*\\]')
+                    west_ports.append(f"{port.name}\\[.*\\]")
                 else:
                     west_ports.append(port.name)
-            
-            west_ports.append(f'FrameData\\[.*\\]')
+
+            west_ports.append(f"FrameData\\[.*\\]")
 
             # A single tile only has 1 side per direction
             north_ports_sides.append(north_ports)
@@ -424,86 +501,145 @@ class FABulousTile(Classic):
             west_ports_sides.append(west_ports)
 
         else:
-        
+
             # Get the supertile
-            supertile = self.fabric.superTileDic[self.config['DESIGN_NAME']]
-        
+            supertile = self.fabric.superTileDic[self.config["DESIGN_NAME"]]
+
             for tile in supertile.tiles:
-            
+
                 # Gen switch matrix
-                self.writer.outFileName = pathlib.Path(os.path.join(self.config["FABULOUS_TILE_DIR"], tile.name, f"{tile.name}_switch_matrix.v"))
-                genTileSwitchMatrix(self.writer, self.fabric, tile, switch_matrix_debug_signal=False)
-                verilog_files.append(os.path.join(self.config["FABULOUS_TILE_DIR"], tile.name, f"{tile.name}_switch_matrix.v"))
+                self.writer.outFileName = pathlib.Path(
+                    os.path.join(
+                        self.config["FABULOUS_TILE_DIR"],
+                        tile.name,
+                        f"{tile.name}_switch_matrix.v",
+                    )
+                )
+                genTileSwitchMatrix(
+                    self.writer, self.fabric, tile, switch_matrix_debug_signal=False
+                )
+                verilog_files.append(
+                    os.path.join(
+                        self.config["FABULOUS_TILE_DIR"],
+                        tile.name,
+                        f"{tile.name}_switch_matrix.v",
+                    )
+                )
 
                 # Gen config mem
-                self.writer.outFileName = pathlib.Path(os.path.join(self.config["FABULOUS_TILE_DIR"], tile.name, f"{tile.name}_ConfigMem.v"))
-                generateConfigMem(self.writer, self.fabric, tile, pathlib.Path(os.path.join(self.config["FABULOUS_TILE_DIR"], tile.name, f"{tile.name}_ConfigMem.csv")))
-                
+                self.writer.outFileName = pathlib.Path(
+                    os.path.join(
+                        self.config["FABULOUS_TILE_DIR"],
+                        tile.name,
+                        f"{tile.name}_ConfigMem.v",
+                    )
+                )
+                generateConfigMem(
+                    self.writer,
+                    self.fabric,
+                    tile,
+                    pathlib.Path(
+                        os.path.join(
+                            self.config["FABULOUS_TILE_DIR"],
+                            tile.name,
+                            f"{tile.name}_ConfigMem.csv",
+                        )
+                    ),
+                )
+
                 # Termination tiles have no config bits, therefore no config mem is generated
-                if pathlib.Path(os.path.join(self.config["FABULOUS_TILE_DIR"], tile.name, f"{tile.name}_ConfigMem.csv")).exists():
-                    verilog_files.append(os.path.join(self.config["FABULOUS_TILE_DIR"], tile.name, f"{tile.name}_ConfigMem.v"))
-                
+                if pathlib.Path(
+                    os.path.join(
+                        self.config["FABULOUS_TILE_DIR"],
+                        tile.name,
+                        f"{tile.name}_ConfigMem.csv",
+                    )
+                ).exists():
+                    verilog_files.append(
+                        os.path.join(
+                            self.config["FABULOUS_TILE_DIR"],
+                            tile.name,
+                            f"{tile.name}_ConfigMem.v",
+                        )
+                    )
+
                 # Gen tile
                 info(f"Generating tile {tile.name}")
-                self.writer.outFileName = pathlib.Path(os.path.join(self.config["FABULOUS_TILE_DIR"], tile.name, f"{tile.name}.v"))
+                self.writer.outFileName = pathlib.Path(
+                    os.path.join(
+                        self.config["FABULOUS_TILE_DIR"], tile.name, f"{tile.name}.v"
+                    )
+                )
                 generateTile(self.writer, self.fabric, tile)
-                verilog_files.append(os.path.join(self.config["FABULOUS_TILE_DIR"], tile.name, f"{tile.name}.v"))
+                verilog_files.append(
+                    os.path.join(
+                        self.config["FABULOUS_TILE_DIR"], tile.name, f"{tile.name}.v"
+                    )
+                )
                 info(f"Generated tile {tile.name}")
-                
+
                 info(tile)
 
                 # Add BELs to verilog files
                 for bel in tile.bels:
                     if not os.path.relpath(bel.src) in verilog_files:
                         verilog_files.append(os.path.relpath(bel.src))
-        
+
             # Gen super tile
             info(f"Generating tile {self.config['DESIGN_NAME']}")
-            self.writer.outFileName = pathlib.Path(os.path.join(self.config["FABULOUS_TILE_DIR"], f"{self.config['DESIGN_NAME']}.v"))
+            self.writer.outFileName = pathlib.Path(
+                os.path.join(
+                    self.config["FABULOUS_TILE_DIR"], f"{self.config['DESIGN_NAME']}.v"
+                )
+            )
             generateSuperTile(self.writer, self.fabric, supertile)
             info(f"Generated tile {self.config['DESIGN_NAME']}")
-            verilog_files.append(os.path.join(self.config["FABULOUS_TILE_DIR"], f"{self.config['DESIGN_NAME']}.v"))
-        
+            verilog_files.append(
+                os.path.join(
+                    self.config["FABULOUS_TILE_DIR"], f"{self.config['DESIGN_NAME']}.v"
+                )
+            )
+
             portsAround = supertile.getPortsAroundTile()
             info(portsAround)
 
             port_sides_dict = {
-                'N': north_ports_sides,
-                'E': east_ports_sides,
-                'S': south_ports_sides,
-                'W': west_ports_sides
+                "N": north_ports_sides,
+                "E": east_ports_sides,
+                "S": south_ports_sides,
+                "W": west_ports_sides,
             }
 
             # Add external pins
-            if self.config['FABULOUS_EXTERNAL_SIDE'] in port_sides_dict:
+            if self.config["FABULOUS_EXTERNAL_SIDE"] in port_sides_dict:
                 ports = []
                 ports.extend(bel.externalInput)
                 ports.extend(bel.externalOutput)
-                
+
                 # TODO: Hack
                 # Add FrameData Signals if external side = E
-                if self.config['FABULOUS_EXTERNAL_SIDE'] == 'E':
+                if self.config["FABULOUS_EXTERNAL_SIDE"] == "E":
                     east_ports = []
                     for k, v in portsAround.items():
                         if not v:
                             continue
                         x, y = k.split(",")
-                
-                        prefix = f'Tile_X{x}Y{y}_'
-                        east_ports.append(prefix + 'FrameData_O\\[.*\\]')
-                    ports.extend(east_ports)
-                
-                port_sides_dict[self.config['FABULOUS_EXTERNAL_SIDE']].append(ports)
 
-            # Get the ports for the fabric            
+                        prefix = f"Tile_X{x}Y{y}_"
+                        east_ports.append(prefix + "FrameData_O\\[.*\\]")
+                    ports.extend(east_ports)
+
+                port_sides_dict[self.config["FABULOUS_EXTERNAL_SIDE"]].append(ports)
+
+            # Get the ports for the fabric
             for coords, ports_side in portsAround.items():
-            
-                x, y = coords.split(',')
-            
-                info(f'({x},{y}): {ports_side}')
-            
+
+                x, y = coords.split(",")
+
+                info(f"({x},{y}): {ports_side}")
+
                 for ports in ports_side:
-                
+
                     # Empty side, continue with next one
                     if not ports:
                         continue
@@ -519,8 +655,8 @@ class FABulousTile(Classic):
                         inOut = port.inOut,
                         sideOfTile = port.sideOfTile,
                     )"""
-                    
-                    prefix = f'Tile_X{x}Y{y}_'
+
+                    prefix = f"Tile_X{x}Y{y}_"
 
                     # TODO Find a better way to get the side
                     side = ports[0].sideOfTile
@@ -532,40 +668,40 @@ class FABulousTile(Classic):
 
                         for port in [port for port in ports if port.inOut == IO.OUTPUT]:
                             if port.wireCount * abs(port.yOffset) > 1:
-                                north_ports.append(f'{prefix}{port.name}\\[.*\\]')
+                                north_ports.append(f"{prefix}{port.name}\\[.*\\]")
                             else:
                                 north_ports.append(prefix + port.name)
-                
+
                         for port in [port for port in ports if port.inOut == IO.INPUT]:
                             if port.wireCount * abs(port.yOffset) > 1:
-                                north_ports.append(f'{prefix}{port.name}\\[.*\\]')
+                                north_ports.append(f"{prefix}{port.name}\\[.*\\]")
                             else:
                                 north_ports.append(prefix + port.name)
-                        
-                        north_ports.append(prefix + 'UserCLKo')
-                        north_ports.append(prefix + 'FrameStrobe_O\\[.*\\]')
-                        
+
+                        north_ports.append(prefix + "UserCLKo")
+                        north_ports.append(prefix + "FrameStrobe_O\\[.*\\]")
+
                         north_ports_sides.append(north_ports)
-                        
+
                     elif side == Side.EAST:
-                        
+
                         # EAST ports
                         east_ports = []
 
                         for port in [port for port in ports if port.inOut == IO.INPUT]:
                             if port.wireCount * abs(port.xOffset) > 1:
-                                east_ports.append(f'{prefix}{port.name}\\[.*\\]')
+                                east_ports.append(f"{prefix}{port.name}\\[.*\\]")
                             else:
                                 east_ports.append(prefix + port.name)
-                
+
                         for port in [port for port in ports if port.inOut == IO.OUTPUT]:
                             if port.wireCount * abs(port.xOffset) > 1:
-                                east_ports.append(f'{prefix}{port.name}\\[.*\\]')
+                                east_ports.append(f"{prefix}{port.name}\\[.*\\]")
                             else:
                                 east_ports.append(prefix + port.name)
-                        
-                        east_ports.append(prefix + 'FrameData_O\\[.*\\]')
-                        
+
+                        east_ports.append(prefix + "FrameData_O\\[.*\\]")
+
                         east_ports_sides.append(east_ports)
 
                     elif side == Side.SOUTH:
@@ -575,18 +711,18 @@ class FABulousTile(Classic):
 
                         for port in [port for port in ports if port.inOut == IO.INPUT]:
                             if port.wireCount * abs(port.yOffset) > 1:
-                                south_ports.append(f'{prefix}{port.name}\\[.*\\]')
+                                south_ports.append(f"{prefix}{port.name}\\[.*\\]")
                             else:
                                 south_ports.append(prefix + port.name)
-                
+
                         for port in [port for port in ports if port.inOut == IO.OUTPUT]:
                             if port.wireCount * abs(port.yOffset) > 1:
-                                south_ports.append(f'{prefix}{port.name}\\[.*\\]')
+                                south_ports.append(f"{prefix}{port.name}\\[.*\\]")
                             else:
                                 south_ports.append(prefix + port.name)
-                        
-                        south_ports.append(prefix + 'UserCLK')
-                        south_ports.append(prefix + 'FrameStrobe\\[.*\\]')
+
+                        south_ports.append(prefix + "UserCLK")
+                        south_ports.append(prefix + "FrameStrobe\\[.*\\]")
 
                         south_ports_sides.append(south_ports)
 
@@ -597,125 +733,122 @@ class FABulousTile(Classic):
 
                         for port in [port for port in ports if port.inOut == IO.OUTPUT]:
                             if port.wireCount * abs(port.xOffset) > 1:
-                                west_ports.append(f'{prefix}{port.name}\\[.*\\]')
+                                west_ports.append(f"{prefix}{port.name}\\[.*\\]")
                             else:
                                 west_ports.append(prefix + port.name)
-                
+
                         for port in [port for port in ports if port.inOut == IO.INPUT]:
                             if port.wireCount * abs(port.xOffset) > 1:
-                                west_ports.append(f'{prefix}{port.name}\\[.*\\]')
+                                west_ports.append(f"{prefix}{port.name}\\[.*\\]")
                             else:
                                 west_ports.append(prefix + port.name)
-                        
-                        west_ports.append(prefix + 'FrameData\\[.*\\]')
+
+                        west_ports.append(prefix + "FrameData\\[.*\\]")
 
                         west_ports_sides.append(west_ports)
 
                     else:
-                        err('No side for port found!')
+                        err("No side for port found!")
 
-        info(f'north_ports_sides: {north_ports_sides}')
-        info(f'east_ports_sides: {east_ports_sides}')
-        info(f'south_ports_sides: {south_ports_sides}')
-        info(f'west_ports_sides: {west_ports_sides}')
+        info(f"north_ports_sides: {north_ports_sides}")
+        info(f"east_ports_sides: {east_ports_sides}")
+        info(f"south_ports_sides: {south_ports_sides}")
+        info(f"west_ports_sides: {west_ports_sides}")
 
         # Create port files that can be read by the io_place script
-        pin_file_old = os.path.join(self.run_dir, 'pins_old.cfg')
-        with open(pin_file_old, 'w') as f:            
-            f.write(f'#N\n\n')
-            
+        pin_file_old = os.path.join(self.run_dir, "pins_old.cfg")
+        with open(pin_file_old, "w") as f:
+            f.write(f"#N\n\n")
+
             for port_side in north_ports_sides:
                 for port in port_side:
-                    f.write(f'{port}\n')
-                
-            #f.write('Tile_X0Y0_UserCLKo\n')
-            #f.write('Tile_X0Y0_FrameStrobe_O\\[.*\\]\n')
-            
-            f.write(f'\n#E\n\n')
-            
+                    f.write(f"{port}\n")
+
+            # f.write('Tile_X0Y0_UserCLKo\n')
+            # f.write('Tile_X0Y0_FrameStrobe_O\\[.*\\]\n')
+
+            f.write(f"\n#E\n\n")
+
             for port_side in east_ports_sides:
                 for port in port_side:
-                    f.write(f'{port}\n')
-            
-            #f.write(f'Tile_X0Y0_FrameData_O\\[.*\\]\n')
-            #f.write(f'Tile_X0Y1_FrameData_O\\[.*\\]\n')
-            
-            f.write(f'\n#S\n\n')
-            
+                    f.write(f"{port}\n")
+
+            # f.write(f'Tile_X0Y0_FrameData_O\\[.*\\]\n')
+            # f.write(f'Tile_X0Y1_FrameData_O\\[.*\\]\n')
+
+            f.write(f"\n#S\n\n")
+
             for port_side in south_ports_sides:
                 for port in port_side:
-                    f.write(f'{port}\n')
-        
-            #f.write('Tile_X0Y1_UserCLK\n')
-            #f.write('Tile_X0Y1_FrameStrobe\\[.*\\]\n')
-            
-            f.write(f'\n#W\n\n')
-            
+                    f.write(f"{port}\n")
+
+            # f.write('Tile_X0Y1_UserCLK\n')
+            # f.write('Tile_X0Y1_FrameStrobe\\[.*\\]\n')
+
+            f.write(f"\n#W\n\n")
+
             for port_side in west_ports_sides:
                 for port in port_side:
-                    f.write(f'{port}\n')
-        
-            #f.write(f'Tile_X0Y0_FrameData\\[.*\\]\n')
-            #f.write(f'Tile_X0Y1_FrameData\\[.*\\]\n')
-    
-    
-        pins_dict = {'N': [], 'E': [], 'S': [], 'W': []}
-    
+                    f.write(f"{port}\n")
+
+            # f.write(f'Tile_X0Y0_FrameData\\[.*\\]\n')
+            # f.write(f'Tile_X0Y1_FrameData\\[.*\\]\n')
+
+        pins_dict = {"N": [], "E": [], "S": [], "W": []}
+
         # TODO reverse?
         for port_side in reversed(north_ports_sides):
-            pins_dict['N'].append(
+            pins_dict["N"].append(
                 {
-                    'min_distance': None,
-                    'reverse_result': False,
-                    'pins': port_side,
-                    'sort_mode': 'bus_major'
-                }
-            )
-        
-        for port_side in reversed(east_ports_sides):
-            pins_dict['E'].append(
-                {
-                    'min_distance': None,
-                    'reverse_result': False,
-                    'pins': port_side,
-                    'sort_mode': 'bus_major'
-                }
-            )
-        
-        # TODO reverse?
-        for port_side in reversed(south_ports_sides):
-            pins_dict['S'].append(
-                {
-                    'min_distance': None,
-                    'reverse_result': False,
-                    'pins': port_side,
-                    'sort_mode': 'bus_major'
-                }
-            )
-        
-        for port_side in reversed(west_ports_sides):
-            pins_dict['W'].append(
-                {
-                    'min_distance': None,
-                    'reverse_result': False,
-                    'pins': port_side,
-                    'sort_mode': 'bus_major'
+                    "min_distance": None,
+                    "reverse_result": False,
+                    "pins": port_side,
+                    "sort_mode": "bus_major",
                 }
             )
 
-    
-        pin_file = os.path.join(self.run_dir, 'pins.yaml')
-        with open(pin_file, 'w') as file:
+        for port_side in reversed(east_ports_sides):
+            pins_dict["E"].append(
+                {
+                    "min_distance": None,
+                    "reverse_result": False,
+                    "pins": port_side,
+                    "sort_mode": "bus_major",
+                }
+            )
+
+        # TODO reverse?
+        for port_side in reversed(south_ports_sides):
+            pins_dict["S"].append(
+                {
+                    "min_distance": None,
+                    "reverse_result": False,
+                    "pins": port_side,
+                    "sort_mode": "bus_major",
+                }
+            )
+
+        for port_side in reversed(west_ports_sides):
+            pins_dict["W"].append(
+                {
+                    "min_distance": None,
+                    "reverse_result": False,
+                    "pins": port_side,
+                    "sort_mode": "bus_major",
+                }
+            )
+
+        pin_file = os.path.join(self.run_dir, "pins.yaml")
+        with open(pin_file, "w") as file:
             yaml.dump(pins_dict, file)
- 
-    
+
         self.config = self.config.copy(IO_PIN_ORDER_CFG=pin_file)
 
         info(self.run_dir)
-        
+
         # Add models and custom cells
-        #verilog_files.append('../../models_pack.v')
-        #verilog_files.append('../../custom.v')
+        # verilog_files.append('../../models_pack.v')
+        # verilog_files.append('../../custom.v')
 
         # debug
         info(verilog_files)
@@ -724,11 +857,13 @@ class FABulousTile(Classic):
         self.config = self.config.copy(VERILOG_FILES=verilog_files)
 
         (final_state, steps) = super().run(initial_state, **kwargs)
-        
-        final_views_path = os.path.abspath(os.path.join(self.config["FABULOUS_TILE_DIR"], 'macro', self.config['PDK']))
-        
-        info(f'Saving final views for FABulous to {final_views_path}')
-        
+
+        final_views_path = os.path.abspath(
+            os.path.join(self.config["FABULOUS_TILE_DIR"], "macro", self.config["PDK"])
+        )
+
+        info(f"Saving final views for FABulous to {final_views_path}")
+
         final_state.save_snapshot(final_views_path)
-        
+
         return (final_state, steps)

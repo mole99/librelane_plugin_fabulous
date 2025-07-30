@@ -26,6 +26,7 @@ from decimal import Decimal
 from reader import click_odb
 import ioplace_parser
 
+
 def grid_to_tracks(origin, count, step):
     tracks = []
     pos = origin
@@ -298,41 +299,39 @@ def io_place(
         print(f"An exception occurred: {e}")
         exit(os.EX_DATAERR)
     """
-    
-    with open(config_file_name, 'r', encoding="utf8") as file:
+
+    with open(config_file_name, "r", encoding="utf8") as file:
         config_data = yaml.safe_load(file)
-    
-    
+
     # INFO: I changed info_by_side to have a list of Side objects
     # This is necessary for supertiles where there are multiple segments
     info_by_side = {
-        'N': [],
-        'E': [],
-        'S': [],
-        'W': [],
+        "N": [],
+        "E": [],
+        "S": [],
+        "W": [],
     }
-    
+
     for side, segments in config_data.items():
         for segment in segments:
-        
-            if segment['sort_mode'] == 'bus_major':
+
+            if segment["sort_mode"] == "bus_major":
                 sort_mode = ioplace_parser.Order.busMajor
-            elif segment['sort_mode'] == 'bus_minor':
+            elif segment["sort_mode"] == "bus_minor":
                 sort_mode = ioplace_parser.Order.busMinor
             else:
                 print(f'Error: Unknown sort mode {segment["sort_mode"]}')
-        
+
             info_by_side[side].append(
                 ioplace_parser.Side(
-                    min_distance = segment['min_distance'],
-                    reverse_result = segment['reverse_result'],
-                    pins = segment['pins'],
-                    sort_mode = sort_mode
+                    min_distance=segment["min_distance"],
+                    reverse_result=segment["reverse_result"],
+                    pins=segment["pins"],
+                    sort_mode=sort_mode,
                 )
             )
-    
-    print(f'info_by_side: {info_by_side}')
-    
+
+    print(f"info_by_side: {info_by_side}")
 
     print("Top-level design name:", reader.name)
 
@@ -367,7 +366,7 @@ def io_place(
         for segment_n, side_info in enumerate(segments):
 
             pin_placement_segment = []
-        
+
             for pin in side_info.pins:
                 if isinstance(pin, int):  # Virtual pins
                     pin_placement[side].append(pin)
@@ -393,10 +392,10 @@ def io_place(
                 pin_placement_segment += collected
                 if not matched:
                     unmatched_regexes.add(pin)
-            
+
             pin_placement[side].append(pin_placement_segment)
 
-    print(f'pin_placement: {pin_placement}')
+    print(f"pin_placement: {pin_placement}")
 
     # check for extra or missing pins
     not_in_design = unmatched_regexes
@@ -434,10 +433,10 @@ def io_place(
         print("Assigning random sides to unmatched pins…")
         for bterm in not_in_config:
             random_side = random.choice(list(pin_placement.keys()))
-            
+
             num_segments = len(random_side)
-            random_segment = random.randint(0, num_segments-1)
-            
+            random_segment = random.randint(0, num_segments - 1)
+
             pin_placement[random_side][random_segment].append(bterm)
 
     # generate slots
@@ -453,48 +452,99 @@ def io_place(
 
     origin, count, h_step = reader.block.findTrackGrid(H_LAYER).getGridPatternY(0)
     print(f"Horizontal Tracks Origin: {origin}, Count: {count}, Step: {h_step}")
-    
+
     h_tracks_E = []
-    
-    for segments_n, _ in enumerate(pin_placement['E']):
-    
-        if count % len(pin_placement['E']) != 0:
-            print(f"Error: Number of pins {count} can't be divided by {len(pin_placement['E'])}")
-    
-        h_tracks_E.append(grid_to_tracks(origin + int((DIE_AREA.yMax() - DIE_AREA.yMin()) * segments_n / len(pin_placement['E'])), count // len(pin_placement['E']), h_step))
+
+    for segments_n, _ in enumerate(pin_placement["E"]):
+
+        if count % len(pin_placement["E"]) != 0:
+            print(
+                f"Error: Number of pins {count} can't be divided by {len(pin_placement['E'])}"
+            )
+
+        h_tracks_E.append(
+            grid_to_tracks(
+                origin
+                + int(
+                    (DIE_AREA.yMax() - DIE_AREA.yMin())
+                    * segments_n
+                    / len(pin_placement["E"])
+                ),
+                count // len(pin_placement["E"]),
+                h_step,
+            )
+        )
 
     h_tracks_W = []
 
-    for segments_n, _ in enumerate(pin_placement['W']):
-    
-        if count % len(pin_placement['W']) != 0:
-            print(f"Error: Number of pins {count} can't be divided by {len(pin_placement['W'])}")
-    
-        h_tracks_W.append(grid_to_tracks(origin + int((DIE_AREA.yMax() - DIE_AREA.yMin()) * segments_n / len(pin_placement['W'])), count // len(pin_placement['W']), h_step))
+    for segments_n, _ in enumerate(pin_placement["W"]):
+
+        if count % len(pin_placement["W"]) != 0:
+            print(
+                f"Error: Number of pins {count} can't be divided by {len(pin_placement['W'])}"
+            )
+
+        h_tracks_W.append(
+            grid_to_tracks(
+                origin
+                + int(
+                    (DIE_AREA.yMax() - DIE_AREA.yMin())
+                    * segments_n
+                    / len(pin_placement["W"])
+                ),
+                count // len(pin_placement["W"]),
+                h_step,
+            )
+        )
 
     # V-tracks
 
     origin, count, v_step = reader.block.findTrackGrid(V_LAYER).getGridPatternX(0)
     print(f"Vertical Tracks Origin: {origin}, Count: {count}, Step: {v_step}")
-    
+
     v_tracks_N = []
-    
-    for segments_n, _ in enumerate(pin_placement['N']):
-    
-        if count % len(pin_placement['N']) != 0:
-            print(f"Error: Number of pins {count} can't be divided by {len(pin_placement['N'])}")
-    
-        v_tracks_N.append(grid_to_tracks(origin + int((DIE_AREA.xMax() - DIE_AREA.xMin()) * segments_n / len(pin_placement['N'])), count // len(pin_placement['N']), v_step))
+
+    for segments_n, _ in enumerate(pin_placement["N"]):
+
+        if count % len(pin_placement["N"]) != 0:
+            print(
+                f"Error: Number of pins {count} can't be divided by {len(pin_placement['N'])}"
+            )
+
+        v_tracks_N.append(
+            grid_to_tracks(
+                origin
+                + int(
+                    (DIE_AREA.xMax() - DIE_AREA.xMin())
+                    * segments_n
+                    / len(pin_placement["N"])
+                ),
+                count // len(pin_placement["N"]),
+                v_step,
+            )
+        )
 
     v_tracks_S = []
 
-    for segments_n, _ in enumerate(pin_placement['S']):
-    
-        if count % len(pin_placement['S']) != 0:
-            print(f"Error: Number of pins {count} can't be divided by {len(pin_placement['S'])}")
-    
-        v_tracks_S.append(grid_to_tracks(origin + int((DIE_AREA.xMax() - DIE_AREA.xMin()) * segments_n / len(pin_placement['S'])), count // len(pin_placement['S']), v_step))
+    for segments_n, _ in enumerate(pin_placement["S"]):
 
+        if count % len(pin_placement["S"]) != 0:
+            print(
+                f"Error: Number of pins {count} can't be divided by {len(pin_placement['S'])}"
+            )
+
+        v_tracks_S.append(
+            grid_to_tracks(
+                origin
+                + int(
+                    (DIE_AREA.xMax() - DIE_AREA.xMin())
+                    * segments_n
+                    / len(pin_placement["S"])
+                ),
+                count // len(pin_placement["S"]),
+                v_step,
+            )
+        )
 
     """
     print(len(h_tracks[0:len(h_tracks)//2]))
@@ -530,39 +580,47 @@ def io_place(
 
     pin_tracks = {"N": [], "E": [], "W": [], "S": []}
     for side, segments in pin_placement.items():
-    
+
         for segment_n, segment in enumerate(segments):
             min_distance = info_by_side[side][segment_n].min_distance * micron_in_units
 
             print(side)
-            #print(len(h_tracks[segment_n]))
+            # print(len(h_tracks[segment_n]))
 
             if side == "N":
-                pin_tracks[side].append([
-                    v_tracks_N[segment_n][i]
-                    for i in range(len(v_tracks_N[segment_n]))
-                    if (i % (math.ceil(min_distance / v_step))) == 0
-                ])
+                pin_tracks[side].append(
+                    [
+                        v_tracks_N[segment_n][i]
+                        for i in range(len(v_tracks_N[segment_n]))
+                        if (i % (math.ceil(min_distance / v_step))) == 0
+                    ]
+                )
             if side == "S":
-                pin_tracks[side].append([
-                    v_tracks_S[segment_n][i]
-                    for i in range(len(v_tracks_S[segment_n]))
-                    if (i % (math.ceil(min_distance / v_step))) == 0
-                ])
+                pin_tracks[side].append(
+                    [
+                        v_tracks_S[segment_n][i]
+                        for i in range(len(v_tracks_S[segment_n]))
+                        if (i % (math.ceil(min_distance / v_step))) == 0
+                    ]
+                )
 
-            elif side == 'E':
-                pin_tracks[side].append([
-                    h_tracks_E[segment_n][i]
-                    for i in range(len(h_tracks_E[segment_n]))
-                    if (i % (math.ceil(min_distance / h_step))) == 0
-                ])
-            elif side == 'W':
-                pin_tracks[side].append([
-                    h_tracks_W[segment_n][i]
-                    for i in range(len(h_tracks_W[segment_n]))
-                    if (i % (math.ceil(min_distance / h_step))) == 0
-                ])
-    
+            elif side == "E":
+                pin_tracks[side].append(
+                    [
+                        h_tracks_E[segment_n][i]
+                        for i in range(len(h_tracks_E[segment_n]))
+                        if (i % (math.ceil(min_distance / h_step))) == 0
+                    ]
+                )
+            elif side == "W":
+                pin_tracks[side].append(
+                    [
+                        h_tracks_W[segment_n][i]
+                        for i in range(len(h_tracks_W[segment_n]))
+                        if (i % (math.ceil(min_distance / h_step))) == 0
+                    ]
+                )
+
     print(pin_tracks)
 
     # reversals (including randomly-assigned pins, if needed)
@@ -573,17 +631,17 @@ def io_place(
 
     # create the pins
     for side, segments in pin_placement.items():
-    
+
         for segment_n, segment in enumerate(segments):
-        
+
             print(side)
             print(pin_placement[side][segment_n])
             print(pin_tracks[side][segment_n])
-        
+
             slots, pin_placement[side][segment_n] = equally_spaced_sequence(
                 side, pin_placement[side][segment_n], pin_tracks[side][segment_n]
             )
-            
+
             print(slots)
 
             assert len(slots) == len(pin_placement[side][segment_n])
@@ -607,8 +665,12 @@ def io_place(
                 pin_bpin.setPlacementStatus("PLACED")
 
                 if side in ["N", "S"]:
-                
-                    offset = int((DIE_AREA.xMax() - DIE_AREA.xMin()) * segments_n / len(pin_placement['N']))
+
+                    offset = int(
+                        (DIE_AREA.xMax() - DIE_AREA.xMin())
+                        * segments_n
+                        / len(pin_placement["N"])
+                    )
 
                     rect = odb.Rect(0, 0, V_WIDTH, V_LENGTH + V_EXTENSION)
                     if side == "N":
@@ -618,8 +680,12 @@ def io_place(
                     rect.moveTo(slot - V_WIDTH // 2, y)
                     odb.dbBox_create(pin_bpin, V_LAYER, *rect.ll(), *rect.ur())
                 else:
-                
-                    offset = int((DIE_AREA.yMax() - DIE_AREA.yMin()) * segments_n / len(pin_placement['E']))
+
+                    offset = int(
+                        (DIE_AREA.yMax() - DIE_AREA.yMin())
+                        * segments_n
+                        / len(pin_placement["E"])
+                    )
 
                     rect = odb.Rect(0, 0, H_LENGTH + H_EXTENSION, H_WIDTH)
                     if side == "E":
@@ -628,6 +694,7 @@ def io_place(
                         x = BLOCK_LL_X - H_EXTENSION
                     rect.moveTo(x, slot - H_WIDTH // 2)
                     odb.dbBox_create(pin_bpin, H_LAYER, *rect.ll(), *rect.ur())
+
 
 if __name__ == "__main__":
     io_place()
