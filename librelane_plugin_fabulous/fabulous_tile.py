@@ -1,6 +1,8 @@
 import os
 import yaml
+import pathlib
 from decimal import Decimal
+from typing import Callable, List, Literal, Mapping, Tuple, Union, Optional, Dict, Any
 from librelane.steps import Step, OdbpyStep
 from librelane.steps.step import (
     ViewsUpdate,
@@ -21,11 +23,6 @@ from librelane.logging import (
     err,
     subprocess,
 )
-
-import pathlib
-
-from typing import Callable, List, Literal, Mapping, Tuple, Union, Optional, Dict, Any
-
 from librelane.steps import (
     Yosys,
     OpenROAD,
@@ -37,16 +34,20 @@ from librelane.steps import (
     Verilator,
     Misc,
 )
-
-__dir__ = os.path.dirname(os.path.abspath(__file__))
-
-from FABulous import FABulous_API
-
-from FABulous.fabric_generator import code_generation_Verilog
-
+from FABulous.fabric_generator.parser import parse_csv
+from FABulous.fabric_generator.gen_fabric.gen_switchmatrix import genTileSwitchMatrix
+from FABulous.fabric_generator.gen_fabric.gen_configmem import generateConfigMem
+from FABulous.fabric_generator.code_generator.code_generator_Verilog import (
+    VerilogCodeGenerator,
+)
+from FABulous.fabric_generator.gen_fabric.gen_tile import (
+    generateSuperTile,
+    generateTile,
+)
 from FABulous.fabric_definition.define import IO, Side
 from FABulous.fabric_definition.Port import Port
 
+__dir__ = os.path.dirname(os.path.abspath(__file__))
 _migrate_unmatched_io = lambda x: "unmatched_design" if x else "none"
 
 @Step.factory.register()
@@ -88,7 +89,8 @@ class FABulousIOPlacement(OdbpyStep):
         Variable(
             "IO_PIN_ORDER_CFG",
             Optional[Path],
-            "Path to the configuration file. If set to `None`, this step is skipped.",
+            "Path to a custom pin configuration file.",
+            deprecated_names=["FP_PIN_ORDER_CFG"],
         ),
         Variable(
             "ERRORS_ON_UNMATCHED_IO",
@@ -244,17 +246,21 @@ class FABulousTile(Classic):
             
             f.write('ParametersEnd\n')
         
-        my_fabric = FABulous_API.FABulous_API(code_generation_Verilog.VerilogWriter(), csv_file)
-        my_fabric.fabric.name = 'fabulous_fabric'
+        # Unfortunately necessary
+        os.environ["FAB_PROJ_DIR"] = '.'
         
-        tileByFabric = list(my_fabric.fabric.tileDic.keys())
-        superTileByFabric = list(my_fabric.fabric.superTileDic.keys())
+        self.writer = VerilogCodeGenerator()
+        self.fabric = parse_csv.parseFabricCSV(pathlib.Path(csv_file))
+        self.fabric.name = 'fabulous_fabric'
+        
+        tileByFabric = list(self.fabric.tileDic.keys())
+        superTileByFabric = list(self.fabric.superTileDic.keys())
         allTile = list(set(tileByFabric + superTileByFabric))
 
         info(f'Tiles used by fabric: {allTile}')
 
         is_supertile = False
-        if self.config['DESIGN_NAME'] in my_fabric.fabric.superTileDic:
+        if self.config['DESIGN_NAME'] in self.fabric.superTileDic:
             is_supertile = True
 
         # Ports for pin placement
@@ -265,25 +271,27 @@ class FABulousTile(Classic):
 
         if not is_supertile:
 
+            tile = self.fabric.getTileByName(self.config['DESIGN_NAME'])
+
             # Gen switch matrix
-            my_fabric.setWriterOutputFile(os.path.join(self.config["FABULOUS_TILE_DIR"], f"{self.config['DESIGN_NAME']}_switch_matrix.v"))
-            my_fabric.genSwitchMatrix(self.config['DESIGN_NAME'])
+            self.writer.outFileName = pathlib.Path(os.path.join(self.config["FABULOUS_TILE_DIR"], f"{self.config['DESIGN_NAME']}_switch_matrix.v"))
+            genTileSwitchMatrix(self.writer, self.fabric, tile, switch_matrix_debug_signal=False)
             verilog_files.append(os.path.join(self.config["FABULOUS_TILE_DIR"], f"{self.config['DESIGN_NAME']}_switch_matrix.v"))
 
             # Gen config mem
-            my_fabric.setWriterOutputFile(os.path.join(self.config["FABULOUS_TILE_DIR"], f"{self.config['DESIGN_NAME']}_ConfigMem.v"))
-            my_fabric.genConfigMem(self.config['DESIGN_NAME'], os.path.join(self.config["FABULOUS_TILE_DIR"], f"{self.config['DESIGN_NAME']}_ConfigMem.csv"))
-            verilog_files.append(os.path.join(self.config["FABULOUS_TILE_DIR"], f"{self.config['DESIGN_NAME']}_ConfigMem.v"))
+            self.writer.outFileName = pathlib.Path(os.path.join(self.config["FABULOUS_TILE_DIR"], f"{self.config['DESIGN_NAME']}_ConfigMem.v"))
+            generateConfigMem(self.writer, self.fabric, tile, pathlib.Path(os.path.join(self.config["FABULOUS_TILE_DIR"], f"{self.config['DESIGN_NAME']}_ConfigMem.csv")))
+            
+            # Termination tiles have no config bits, therefore no config mem is generated
+            if pathlib.Path(os.path.join(self.config["FABULOUS_TILE_DIR"], f"{self.config['DESIGN_NAME']}_ConfigMem.csv")).exists():
+                verilog_files.append(os.path.join(self.config["FABULOUS_TILE_DIR"], f"{self.config['DESIGN_NAME']}_ConfigMem.v"))
 
             # Gen tile
             info(f"Generating tile {self.config['DESIGN_NAME']}")
-            my_fabric.setWriterOutputFile(os.path.join(self.config["FABULOUS_TILE_DIR"], f"{self.config['DESIGN_NAME']}.v"))
-            my_fabric.genTile(self.config['DESIGN_NAME'])
+            self.writer.outFileName = pathlib.Path(os.path.join(self.config["FABULOUS_TILE_DIR"], f"{self.config['DESIGN_NAME']}.v"))
+            generateTile(self.writer, self.fabric, tile)
             verilog_files.append(os.path.join(self.config["FABULOUS_TILE_DIR"], f"{self.config['DESIGN_NAME']}.v"))
             info(f"Generated tile {self.config['DESIGN_NAME']}")
-        
-            # Get the tile
-            tile = my_fabric.fabric.tileDic[self.config['DESIGN_NAME']]
 
             info(tile)
 
@@ -418,32 +426,30 @@ class FABulousTile(Classic):
         else:
         
             # Get the supertile
-            supertile = my_fabric.fabric.superTileDic[self.config['DESIGN_NAME']]
+            supertile = self.fabric.superTileDic[self.config['DESIGN_NAME']]
         
             for tile in supertile.tiles:
             
-                info(tile)
-            
                 # Gen switch matrix
-                my_fabric.setWriterOutputFile(os.path.join(self.config["FABULOUS_TILE_DIR"], tile.name, f"{tile.name}_switch_matrix.v"))
-                my_fabric.genSwitchMatrix(tile.name)
+                self.writer.outFileName = pathlib.Path(os.path.join(self.config["FABULOUS_TILE_DIR"], tile.name, f"{tile.name}_switch_matrix.v"))
+                genTileSwitchMatrix(self.writer, self.fabric, tile, switch_matrix_debug_signal=False)
                 verilog_files.append(os.path.join(self.config["FABULOUS_TILE_DIR"], tile.name, f"{tile.name}_switch_matrix.v"))
 
                 # Gen config mem
-                my_fabric.setWriterOutputFile(os.path.join(self.config["FABULOUS_TILE_DIR"], tile.name, f"{tile.name}_ConfigMem.v"))
-                my_fabric.genConfigMem(tile.name, os.path.join(self.config["FABULOUS_TILE_DIR"], tile.name, f"{tile.name}_ConfigMem.csv"))
-                verilog_files.append(os.path.join(self.config["FABULOUS_TILE_DIR"], tile.name, f"{tile.name}_ConfigMem.v"))
+                self.writer.outFileName = pathlib.Path(os.path.join(self.config["FABULOUS_TILE_DIR"], tile.name, f"{tile.name}_ConfigMem.v"))
+                generateConfigMem(self.writer, self.fabric, tile, pathlib.Path(os.path.join(self.config["FABULOUS_TILE_DIR"], tile.name, f"{tile.name}_ConfigMem.csv")))
+                
+                # Termination tiles have no config bits, therefore no config mem is generated
+                if pathlib.Path(os.path.join(self.config["FABULOUS_TILE_DIR"], tile.name, f"{tile.name}_ConfigMem.csv")).exists():
+                    verilog_files.append(os.path.join(self.config["FABULOUS_TILE_DIR"], tile.name, f"{tile.name}_ConfigMem.v"))
                 
                 # Gen tile
                 info(f"Generating tile {tile.name}")
-                my_fabric.setWriterOutputFile(os.path.join(self.config["FABULOUS_TILE_DIR"], tile.name, f"{tile.name}.v"))
-                my_fabric.genTile(tile.name)
+                self.writer.outFileName = pathlib.Path(os.path.join(self.config["FABULOUS_TILE_DIR"], tile.name, f"{tile.name}.v"))
+                generateTile(self.writer, self.fabric, tile)
                 verilog_files.append(os.path.join(self.config["FABULOUS_TILE_DIR"], tile.name, f"{tile.name}.v"))
                 info(f"Generated tile {tile.name}")
                 
-                # Get the tile
-                tile = my_fabric.fabric.tileDic[tile.name]
-
                 info(tile)
 
                 # Add BELs to verilog files
@@ -453,8 +459,8 @@ class FABulousTile(Classic):
         
             # Gen super tile
             info(f"Generating tile {self.config['DESIGN_NAME']}")
-            my_fabric.setWriterOutputFile(os.path.join(self.config["FABULOUS_TILE_DIR"], f"{self.config['DESIGN_NAME']}.v"))
-            my_fabric.genSuperTile(self.config['DESIGN_NAME'])
+            self.writer.outFileName = pathlib.Path(os.path.join(self.config["FABULOUS_TILE_DIR"], f"{self.config['DESIGN_NAME']}.v"))
+            generateSuperTile(self.writer, self.fabric, supertile)
             info(f"Generated tile {self.config['DESIGN_NAME']}")
             verilog_files.append(os.path.join(self.config["FABULOUS_TILE_DIR"], f"{self.config['DESIGN_NAME']}.v"))
         

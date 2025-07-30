@@ -3,7 +3,9 @@ import csv
 import shutil
 import pickle
 import fnmatch
+import pathlib
 from decimal import Decimal
+from typing import Callable, List, Literal, Mapping, Tuple, Union, Optional, Dict, Any
 from librelane.steps import Step, OdbpyStep, OpenROADStep
 from librelane.steps.step import (
     ViewsUpdate,
@@ -24,11 +26,6 @@ from librelane.logging import (
     err,
     subprocess,
 )
-
-import pathlib
-
-from typing import Callable, List, Literal, Mapping, Tuple, Union, Optional, Dict, Any
-
 from librelane.steps import (
     Yosys,
     OpenROAD,
@@ -40,13 +37,17 @@ from librelane.steps import (
     Verilator,
     Misc,
 )
-
 from librelane.steps.common_variables import pdn_variables
+import FABulous.fabric_cad.gen_npnr_model as model_gen_npnr
+from FABulous.fabric_generator.code_generator.code_generator_Verilog import (
+    VerilogCodeGenerator,
+)
+from FABulous.fabric_generator.parser import parse_csv
+from FABulous.fabric_generator.gen_fabric.gen_fabric import generateFabric
+from FABulous.geometry_generator.geometry_gen import GeometryGenerator
+from FABulous.fabric_cad.gen_bitstream_spec import generateBitstreamSpec
 
 __dir__ = os.path.dirname(os.path.abspath(__file__))
-
-from FABulous import FABulous_API
-from FABulous.fabric_generator import code_generation_Verilog
 
 @Step.factory.register()
 class FABulousManualIOPlacement(OpenROADStep):
@@ -228,23 +229,28 @@ class FABulousFabric(Classic):
 
         verilog_files = self.config['VERILOG_FILES']
 
-        my_fabric = FABulous_API.FABulous_API(code_generation_Verilog.VerilogWriter(), self.config['FABULOUS_FABRIC_CONFIG'])
-        my_fabric.fabric.name = 'eFPGA' # TODO name change does not change module name
+        # Unfortunately necessary
+        os.environ["FAB_PROJ_DIR"] = '.'
+
+        self.writer = VerilogCodeGenerator()
+        self.fabric = parse_csv.parseFabricCSV(pathlib.Path(self.config['FABULOUS_FABRIC_CONFIG']))
+        self.fabric.name = 'eFPGA' # TODO name change does not change module name
         
-        tileByFabric = list(my_fabric.fabric.tileDic.keys())
-        superTileByFabric = list(my_fabric.fabric.superTileDic.keys())
+        tileByFabric = list(self.fabric.tileDic.keys())
+        superTileByFabric = list(self.fabric.superTileDic.keys())
         allTile = list(set(tileByFabric + superTileByFabric))
 
         info(f'Tiles used by fabric: {allTile}')
         
-        my_fabric.setWriterOutputFile(os.path.join(self.run_dir, f'{my_fabric.fabric.name}.v'))
-        my_fabric.genFabric()
+        self.writer.outFileName = pathlib.Path(os.path.join(self.run_dir, f'{self.fabric.name}.v'))
+        generateFabric(self.writer, self.fabric)
 
-        my_fabric.setWriterOutputFile(os.path.join(self.run_dir, f'geometry.csv'))
-        my_fabric.genGeometry()
+        self.geometryGenerator = GeometryGenerator(self.fabric)
+        self.geometryGenerator.generateGeometry()
+        self.geometryGenerator.saveToCSV(pathlib.Path(os.path.join(self.run_dir, f'geometry.csv')))
 
         # Export bitstream spec
-        specObject = my_fabric.genBitStreamSpec()
+        specObject = generateBitstreamSpec(self.fabric)
         with open(
             os.path.join(self.run_dir, f'bitStreamSpec.bin'), "wb"
         ) as outFile:
@@ -258,7 +264,7 @@ class FABulousFabric(Classic):
                     w.writerow([key2, val])
 
         # Export nextpnr model
-        npnrModel = my_fabric.genRoutingModel()
+        npnrModel = model_gen_npnr.genNextpnrModel(self.fabric)
         with open(os.path.join(self.run_dir, f'pips.txt'), "w") as f:
             f.write(npnrModel[0])
 
@@ -272,10 +278,10 @@ class FABulousFabric(Classic):
             f.write(npnrModel[3])
 
         # Get the fabric Verilog file
-        verilog_files.append(os.path.join(self.run_dir, f'{my_fabric.fabric.name}.v'))
+        verilog_files.append(os.path.join(self.run_dir, f'{self.fabric.name}.v'))
 
         tiles = []
-        for row in my_fabric.fabric.tile:
+        for row in self.fabric.tile:
             for tile in row:
                 if tile != None and not tile.name in tiles:
                     tiles.append(tile.name)
@@ -286,7 +292,7 @@ class FABulousFabric(Classic):
 
         # Extract subtiles from supertiles
         supertiles = {}
-        for supertile_name, supertile in my_fabric.fabric.superTileDic.items():
+        for supertile_name, supertile in self.fabric.superTileDic.items():
             supertiles[supertile_name] = []
             for tile in supertile.tiles:
                 supertiles[supertile_name].append(tile.name)
@@ -349,7 +355,7 @@ class FABulousFabric(Classic):
             tile_sizes = {}
 
             # Get the tile sizes for each individual tile
-            for tile_name in my_fabric.fabric.tileDic:
+            for tile_name in self.fabric.tileDic:
                 tile_size = None
                 for pattern in self.config["FABULOUS_TILE_SIZES"]:
                     if fnmatch.fnmatch(tile_name, pattern):
@@ -365,15 +371,15 @@ class FABulousFabric(Classic):
             # Calculate width and height of the fabric
             # from the sizes of the individual tiles
             
-            FABRIC_NUM_TILES_X = my_fabric.fabric.numberOfColumns
-            FABRIC_NUM_TILES_Y = my_fabric.fabric.numberOfRows
+            FABRIC_NUM_TILES_X = self.fabric.numberOfColumns
+            FABRIC_NUM_TILES_Y = self.fabric.numberOfRows
             
             # FABRIC_WIDTH
             FABRIC_WIDTH = halo_left + halo_right
             
             for i in range(FABRIC_NUM_TILES_X):
                 # Find a non-NULL tile
-                for row in my_fabric.fabric.tile:
+                for row in self.fabric.tile:
                     if row[i] != None:
                         # Append tile width
                         FABRIC_WIDTH += tile_sizes[row[i].name][0] + TILE_SPACING
@@ -387,7 +393,7 @@ class FABulousFabric(Classic):
             
             for i in range(FABRIC_NUM_TILES_Y):
                 # Find a non-NULL tile
-                for tile in my_fabric.fabric.tile[i]:
+                for tile in self.fabric.tile[i]:
                     if tile != None:
                         # Append tile height
                         FABRIC_HEIGHT += tile_sizes[tile.name][1] + TILE_SPACING
@@ -400,7 +406,7 @@ class FABulousFabric(Classic):
             row_heights = []
             for i in range(FABRIC_NUM_TILES_Y):
                 # Find a non-NULL tile
-                for tile in my_fabric.fabric.tile[i]:
+                for tile in self.fabric.tile[i]:
                     if tile != None:
                         # Append tile height
                         row_heights.append(tile_sizes[tile.name][1])
@@ -412,7 +418,7 @@ class FABulousFabric(Classic):
             column_widths = []
             for i in range(FABRIC_NUM_TILES_X):
                 # Find a non-NULL tile
-                for row in my_fabric.fabric.tile:
+                for row in self.fabric.tile:
                     if row[i] != None:
                         # Append tile width
                         column_widths.append(tile_sizes[row[i].name][0])
@@ -422,7 +428,7 @@ class FABulousFabric(Classic):
 
             # Place macros
             cur_y = 0
-            for y, row in enumerate(reversed(my_fabric.fabric.tile)):
+            for y, row in enumerate(reversed(self.fabric.tile)):
                 cur_x = 0
                 flipped_y = FABRIC_NUM_TILES_Y-1-y
 
@@ -499,7 +505,7 @@ class FABulousFabric(Classic):
         os.makedirs(fabulous_path, exist_ok=True)
         os.makedirs(fabulous_hidden_path, exist_ok=True)
         
-        shutil.copy(os.path.join(self.run_dir, f'{my_fabric.fabric.name}.v'), os.path.join(fabulous_path, f'{my_fabric.fabric.name}.v'))
+        shutil.copy(os.path.join(self.run_dir, f'{self.fabric.name}.v'), os.path.join(fabulous_path, f'{self.fabric.name}.v'))
         shutil.copy(os.path.join(self.run_dir, f'geometry.csv'), os.path.join(fabulous_path, f'geometry.csv'))
         shutil.copy(os.path.join(self.run_dir, f'bitStreamSpec.bin'), os.path.join(fabulous_path, f'bitStreamSpec.bin'))
         shutil.copy(os.path.join(self.run_dir, f'bitStreamSpec.csv'), os.path.join(fabulous_path, f'bitStreamSpec.csv'))

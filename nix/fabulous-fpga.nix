@@ -6,9 +6,12 @@
   python-dotenv,
   loguru,
   fasm,
-  version ? "2.0.0+b22eaa94",
-  rev ? "b22eaa94888480dcd424aeaa9cfaaebc77a15ce1",
-  sha256 ? "sha256-11bLT1nRHBCAVJCTjj6r84KiY6nGcU3csCwOhfBQNUg=",
+  requests,
+  cmd2,
+  bitarray,
+  version ? "2.0.0+887d22b9",
+  rev ? "887d22b926e6400512dba12f63e634706807119e",
+  sha256 ? "sha256-IcKLas4Fp2+tbY7K1TXTXrtDhKahChhqIUBCNonVjMc=",
 }: let
 
   self = buildPythonPackage {
@@ -33,6 +36,9 @@
       python-dotenv
       loguru
       fasm
+      requests
+      cmd2
+      bitarray
     ];
     
     # Remove the executables as they make problems with Nix?
