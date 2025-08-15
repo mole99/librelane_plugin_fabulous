@@ -616,8 +616,7 @@ class FABulousTile(Classic):
                 ports.extend(bel.externalInput)
                 ports.extend(bel.externalOutput)
 
-                # TODO: Hack
-                # Add FrameData Signals if external side = E
+                # TODO Hack: Add FrameData_O Signals if external side = E
                 if self.config["FABULOUS_EXTERNAL_SIDE"] == "E":
                     east_ports = []
                     for k, v in portsAround.items():
@@ -627,6 +626,18 @@ class FABulousTile(Classic):
 
                         prefix = f"Tile_X{x}Y{y}_"
                         east_ports.append(prefix + "FrameData_O\\[.*\\]")
+                    ports.extend(east_ports)
+                
+                # TODO Hack: Add FrameData Signals if external side = W
+                if self.config["FABULOUS_EXTERNAL_SIDE"] == "W":
+                    east_ports = []
+                    for k, v in portsAround.items():
+                        if not v:
+                            continue
+                        x, y = k.split(",")
+
+                        prefix = f"Tile_X{x}Y{y}_"
+                        east_ports.append(prefix + "FrameData\\[.*\\]")
                     ports.extend(east_ports)
 
                 port_sides_dict[self.config["FABULOUS_EXTERNAL_SIDE"]].append(ports)
