@@ -11,7 +11,7 @@
   bitarray,
   version ? "2.0.0+887d22b9",
   rev ? "887d22b926e6400512dba12f63e634706807119e",
-  sha256 ? "sha256-IcKLas4Fp2+tbY7K1TXTXrtDhKahChhqIUBCNonVjMc=",
+  sha256 ? "sha256-WyJsXviZbGNlaXVMFCEz/8KNp8OUS5CJpmkjJsDWBi8=",
 }: let
 
   self = buildPythonPackage {
@@ -31,6 +31,10 @@
         setuptools
         setuptools_scm
       ];
+  
+    patches = [
+        ./patches/fabulous/fix_supertile_framedata_o.patch
+    ];
      
     dependencies = [
       python-dotenv

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "librelane_plugin_fabulous"
-version = "1.1.1"
+version = "1.2.0"
 description = "FABulous plugin for LibreLane"
 authors = ["Leo Moser <leomoser99@gmail.com>"]
 license = "Apache-2.0"
@@ -15,6 +15,8 @@ classifiers = [
 include = [
     "scripts/io_place.py",
     "scripts/odb_power.py",
+    "scripts/manual_ioplacer.tcl",
+    "scripts/add_buffers.tcl",
 ]
 
 [tool.poetry.dependencies]

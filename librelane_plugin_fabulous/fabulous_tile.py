@@ -3,7 +3,7 @@ import yaml
 import pathlib
 from decimal import Decimal
 from typing import Callable, List, Literal, Mapping, Tuple, Union, Optional, Dict, Any
-from librelane.steps import Step, OdbpyStep
+from librelane.steps import Step, OdbpyStep, OpenROADStep
 from librelane.steps.step import (
     ViewsUpdate,
     MetricsUpdate,
@@ -34,6 +34,13 @@ from librelane.steps import (
     Verilator,
     Misc,
 )
+from librelane.steps.common_variables import (
+    grt_variables,
+    io_layer_variables,
+    pdn_variables,  # TODO
+    rsz_variables,
+)
+
 from FABulous.fabric_generator.parser import parse_csv
 from FABulous.fabric_generator.gen_fabric.gen_switchmatrix import genTileSwitchMatrix
 from FABulous.fabric_generator.gen_fabric.gen_configmem import generateConfigMem
@@ -142,6 +149,60 @@ class FABulousIOPlacement(OdbpyStep):
             info("No custom floorplan file configured, skipping…")
             return {}, {}
         return super().run(state_in, **kwargs)
+
+
+@Step.factory.register()
+class AddBuffers(OpenROADStep):
+    """
+    Adds buffers to a global-placed ODB file.
+    """
+
+    id = "OpenROAD.AddBuffers"
+    name = "Add Buffers (Post-Global Placement)"
+
+    config_vars = (
+        OpenROADStep.config_vars
+        + grt_variables
+        + rsz_variables
+        + [
+            Variable(
+                "DESIGN_REPAIR_BUFFER_INPUT_PORTS",
+                bool,
+                "Specifies whether or not to insert buffers on input ports when design repairs are run.",
+                default=True,
+                deprecated_names=["PL_RESIZER_BUFFER_INPUT_PORTS"],
+            ),
+            Variable(
+                "DESIGN_REPAIR_BUFFER_OUTPUT_PORTS",
+                bool,
+                "Specifies whether or not to insert buffers on input ports when design repairs are run.",
+                default=True,
+                deprecated_names=["PL_RESIZER_BUFFER_OUTPUT_PORTS"],
+            ),
+            Variable(
+                "DESIGN_REPAIR_REMOVE_BUFFERS",
+                bool,
+                "Invokes OpenROAD's remove_buffers command to remove buffers from synthesis, which gives OpenROAD more flexibility when buffering nets.",
+                default=False,
+            ),
+        ]
+    )
+
+    def run(
+        self,
+        state_in,
+        **kwargs,
+    ) -> Tuple[ViewsUpdate, MetricsUpdate]:
+        kwargs, env = self.extract_env(kwargs)
+        return super().run(
+            state_in,
+            corners=self.config["RSZ_CORNERS"] or self.config["STA_CORNERS"],
+            env=env,
+            **kwargs,
+        )
+
+    def get_script_path(self):
+        return os.path.join(os.path.dirname(__file__), "scripts", "add_buffers.tcl")
 
 
 Classic = Flow.factory.get("Classic")
@@ -601,7 +662,7 @@ class FABulousTile(Classic):
             )
 
             portsAround = supertile.getPortsAroundTile()
-            info(portsAround)
+            info(f"SuperTile portsAround: {portsAround}")
 
             port_sides_dict = {
                 "N": north_ports_sides,
@@ -610,162 +671,142 @@ class FABulousTile(Classic):
                 "W": west_ports_sides,
             }
 
-            # Add external pins
-            if self.config["FABULOUS_EXTERNAL_SIDE"] in port_sides_dict:
+            # New algorithm TODO
+
+            for y, row in enumerate(supertile.tileMap):
+                for x, _tile in enumerate(row):
+
+                    prefix = f"Tile_X{x}Y{y}_"
+
+                    side_to_direction = {
+                        "N": Side.NORTH,
+                        "E": Side.EAST,
+                        "S": Side.SOUTH,
+                        "W": Side.WEST,
+                    }
+
+                    for side in [
+                        Side.NORTH,
+                        Side.EAST,
+                        Side.SOUTH,
+                        Side.WEST,
+                    ]:  # ["N", "E", "S", "W"]:
+                        # The ports to add for this side
+                        ports = []
+
+                        # Check if there are ports to add
+                        print(f"Checking {x},{y} {Side.NORTH}")
+
+                        if f"{x},{y}" in portsAround:
+                            ports_sides = portsAround[f"{x},{y}"]
+
+                            # Remove empty ports sides
+                            ports_sides = [
+                                ports_side for ports_side in ports_sides if ports_side
+                            ]
+
+                            for ports_side in ports_sides:
+
+                                # Port directions must be inverted for two facing sides
+                                # so that BEG and END ports match up
+                                port_direction_first = (
+                                    IO.OUTPUT
+                                    if side == Side.NORTH or side == Side.WEST
+                                    else IO.INPUT
+                                )
+                                port_direction_second = (
+                                    IO.INPUT
+                                    if side == Side.NORTH or side == Side.WEST
+                                    else IO.OUTPUT
+                                )
+
+                                # First list all port_direction_first ports
+                                for port in ports_side:
+                                    wire_offset = (
+                                        abs(port.yOffset)
+                                        if side == Side.NORTH or side == Side.SOUTH
+                                        else abs(port.xOffset)
+                                    )
+
+                                    if (
+                                        port.sideOfTile == side
+                                        and port.inOut == port_direction_first
+                                    ):
+                                        if port.wireCount * wire_offset > 1:
+                                            ports.append(f"{prefix}{port.name}\\[.*\\]")
+                                        else:
+                                            ports.append(prefix + port.name)
+
+                                # Then the port_direction_second ports
+                                for port in ports_side:
+                                    wire_offset = (
+                                        abs(port.yOffset)
+                                        if side == Side.NORTH or side == Side.SOUTH
+                                        else abs(port.xOffset)
+                                    )
+
+                                    if (
+                                        port.sideOfTile == side
+                                        and port.inOut == port_direction_second
+                                    ):
+                                        if port.wireCount * wire_offset > 1:
+                                            ports.append(f"{prefix}{port.name}\\[.*\\]")
+                                        else:
+                                            ports.append(prefix + port.name)
+
+                        # Now add configuration ports + clock
+                        if side == Side.NORTH:
+                            ports.append(prefix + "UserCLKo")
+                            ports.append(prefix + "FrameStrobe_O\\[.*\\]")
+
+                        if side == Side.SOUTH:
+                            ports.append(prefix + "UserCLK")
+                            ports.append(prefix + "FrameStrobe\\[.*\\]")
+
+                        if side == Side.EAST:
+                            ports.append(prefix + "FrameData_O\\[.*\\]")
+
+                        if side == Side.WEST:
+                            ports.append(prefix + "FrameData\\[.*\\]")
+
+                        # Now let's check whether the tile is actually at
+                        # the edge of the supertile and we should emit the ports
+                        if side == Side.WEST and (
+                            x == 0 or supertile.tileMap[y][x - 1] == None
+                        ):
+                            port_sides_dict["W"].append(ports)
+
+                        if side == Side.EAST and (
+                            x == len(supertile.tileMap[y]) - 1
+                            or supertile.tileMap[y][x + 1] == None
+                        ):
+                            port_sides_dict["E"].append(ports)
+
+                        if side == Side.NORTH and (
+                            y == 0 or supertile.tileMap[y - 1][x] == None
+                        ):
+                            port_sides_dict["N"].append(ports)
+
+                        if side == Side.SOUTH and (
+                            y == len(supertile.tileMap) - 1
+                            or supertile.tileMap[y + 1][x] == None
+                        ):
+                            port_sides_dict["S"].append(ports)
+
+            # Finally, add external ports
+            if self.config["FABULOUS_EXTERNAL_SIDE"]:
                 ports = []
                 ports.extend(bel.externalInput)
                 ports.extend(bel.externalOutput)
 
-                # TODO Hack: Add FrameData_O Signals if external side = E
-                if self.config["FABULOUS_EXTERNAL_SIDE"] == "E":
-                    east_ports = []
-                    for k, v in portsAround.items():
-                        if not v:
-                            continue
-                        x, y = k.split(",")
-
-                        prefix = f"Tile_X{x}Y{y}_"
-                        east_ports.append(prefix + "FrameData_O\\[.*\\]")
-                    ports.extend(east_ports)
-                
-                # TODO Hack: Add FrameData Signals if external side = W
-                if self.config["FABULOUS_EXTERNAL_SIDE"] == "W":
-                    east_ports = []
-                    for k, v in portsAround.items():
-                        if not v:
-                            continue
-                        x, y = k.split(",")
-
-                        prefix = f"Tile_X{x}Y{y}_"
-                        east_ports.append(prefix + "FrameData\\[.*\\]")
-                    ports.extend(east_ports)
-
                 port_sides_dict[self.config["FABULOUS_EXTERNAL_SIDE"]].append(ports)
-
-            # Get the ports for the fabric
-            for coords, ports_side in portsAround.items():
-
-                x, y = coords.split(",")
-
-                info(f"({x},{y}): {ports_side}")
-
-                for ports in ports_side:
-
-                    # Empty side, continue with next one
-                    if not ports:
-                        continue
-
-                    """port = Port(
-                        wireDirection = port.wireDirection,
-                        sourceName = port.sourceName,
-                        xOffset = port.xOffset,
-                        yOffset = port.yOffset,
-                        destinationName = port.destinationName,
-                        wireCount = port.wireCount,
-                        name = f'Tile_X{x}Y{y}_' + port.name,
-                        inOut = port.inOut,
-                        sideOfTile = port.sideOfTile,
-                    )"""
-
-                    prefix = f"Tile_X{x}Y{y}_"
-
-                    # TODO Find a better way to get the side
-                    side = ports[0].sideOfTile
-
-                    if side == Side.NORTH:
-
-                        # NORTH ports
-                        north_ports = []
-
-                        for port in [port for port in ports if port.inOut == IO.OUTPUT]:
-                            if port.wireCount * abs(port.yOffset) > 1:
-                                north_ports.append(f"{prefix}{port.name}\\[.*\\]")
-                            else:
-                                north_ports.append(prefix + port.name)
-
-                        for port in [port for port in ports if port.inOut == IO.INPUT]:
-                            if port.wireCount * abs(port.yOffset) > 1:
-                                north_ports.append(f"{prefix}{port.name}\\[.*\\]")
-                            else:
-                                north_ports.append(prefix + port.name)
-
-                        north_ports.append(prefix + "UserCLKo")
-                        north_ports.append(prefix + "FrameStrobe_O\\[.*\\]")
-
-                        north_ports_sides.append(north_ports)
-
-                    elif side == Side.EAST:
-
-                        # EAST ports
-                        east_ports = []
-
-                        for port in [port for port in ports if port.inOut == IO.INPUT]:
-                            if port.wireCount * abs(port.xOffset) > 1:
-                                east_ports.append(f"{prefix}{port.name}\\[.*\\]")
-                            else:
-                                east_ports.append(prefix + port.name)
-
-                        for port in [port for port in ports if port.inOut == IO.OUTPUT]:
-                            if port.wireCount * abs(port.xOffset) > 1:
-                                east_ports.append(f"{prefix}{port.name}\\[.*\\]")
-                            else:
-                                east_ports.append(prefix + port.name)
-
-                        east_ports.append(prefix + "FrameData_O\\[.*\\]")
-
-                        east_ports_sides.append(east_ports)
-
-                    elif side == Side.SOUTH:
-
-                        # SOUTH ports
-                        south_ports = []
-
-                        for port in [port for port in ports if port.inOut == IO.INPUT]:
-                            if port.wireCount * abs(port.yOffset) > 1:
-                                south_ports.append(f"{prefix}{port.name}\\[.*\\]")
-                            else:
-                                south_ports.append(prefix + port.name)
-
-                        for port in [port for port in ports if port.inOut == IO.OUTPUT]:
-                            if port.wireCount * abs(port.yOffset) > 1:
-                                south_ports.append(f"{prefix}{port.name}\\[.*\\]")
-                            else:
-                                south_ports.append(prefix + port.name)
-
-                        south_ports.append(prefix + "UserCLK")
-                        south_ports.append(prefix + "FrameStrobe\\[.*\\]")
-
-                        south_ports_sides.append(south_ports)
-
-                    elif side == Side.WEST:
-
-                        # WEST ports
-                        west_ports = []
-
-                        for port in [port for port in ports if port.inOut == IO.OUTPUT]:
-                            if port.wireCount * abs(port.xOffset) > 1:
-                                west_ports.append(f"{prefix}{port.name}\\[.*\\]")
-                            else:
-                                west_ports.append(prefix + port.name)
-
-                        for port in [port for port in ports if port.inOut == IO.INPUT]:
-                            if port.wireCount * abs(port.xOffset) > 1:
-                                west_ports.append(f"{prefix}{port.name}\\[.*\\]")
-                            else:
-                                west_ports.append(prefix + port.name)
-
-                        west_ports.append(prefix + "FrameData\\[.*\\]")
-
-                        west_ports_sides.append(west_ports)
-
-                    else:
-                        err("No side for port found!")
 
         info(f"north_ports_sides: {north_ports_sides}")
         info(f"east_ports_sides: {east_ports_sides}")
         info(f"south_ports_sides: {south_ports_sides}")
         info(f"west_ports_sides: {west_ports_sides}")
 
+        """
         # Create port files that can be read by the io_place script
         pin_file_old = os.path.join(self.run_dir, "pins_old.cfg")
         with open(pin_file_old, "w") as f:
@@ -805,10 +846,12 @@ class FABulousTile(Classic):
             # f.write(f'Tile_X0Y0_FrameData\\[.*\\]\n')
             # f.write(f'Tile_X0Y1_FrameData\\[.*\\]\n')
 
+        """
+
         pins_dict = {"N": [], "E": [], "S": [], "W": []}
 
         # TODO reverse?
-        for port_side in reversed(north_ports_sides):
+        for port_side in north_ports_sides:
             pins_dict["N"].append(
                 {
                     "min_distance": None,
@@ -829,7 +872,7 @@ class FABulousTile(Classic):
             )
 
         # TODO reverse?
-        for port_side in reversed(south_ports_sides):
+        for port_side in south_ports_sides:
             pins_dict["S"].append(
                 {
                     "min_distance": None,

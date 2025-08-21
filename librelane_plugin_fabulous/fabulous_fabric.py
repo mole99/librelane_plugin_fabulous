@@ -78,81 +78,16 @@ class FABulousPower(OdbpyStep):
     id = "Odb.FABulousPower"
     name = "FABulous Power connections for the tiles"
 
-    config_vars = pdn_variables + [
-        Variable(
-            "FABULOUS_HALO_SPACING",
-            Optional[Tuple[Decimal, Decimal, Decimal, Decimal]],
-            "The spacing around the fabric. [left, bottom, right, top]",
-            units="µm",
-            default=[100, 100, 100, 100],
-        ),
-        Variable(
-            "FABULOUS_TILE_WIDTHS",
-            List[Decimal],
-            "The tile widths for each column.",
-            units="µm",
-            default=[],
-        ),
-    ]
+    config_vars = pdn_variables
 
     def get_script_path(self):
         return os.path.join(os.path.dirname(__file__), "scripts", "odb_power.py")
 
     def get_command(self) -> List[str]:
 
-        x0, y0, x1, y1 = self.config["DIE_AREA"]
-        print(f"{x0} {y0} {x1} {y1}")
-
-        assert x0 == 0
-        assert y0 == 0
-
-        HALO_SPACING = self.config["FABULOUS_HALO_SPACING"]
-        halo_left, halo_bottom, halo_right, halo_top = (
-            HALO_SPACING[0],
-            HALO_SPACING[1],
-            HALO_SPACING[2],
-            HALO_SPACING[3],
-        )
-        print(f"{halo_left} {halo_bottom} {halo_right} {halo_top}")
-
-        if self.config["PDK"] in ["sky130A", "sky130B"]:
-            core_voffset = 5.52
-            core_hoffset = 10.88
-        elif self.config["PDK"] in ["ihp-sg13g2"]:
-            core_voffset = 5.76
-            core_hoffset = 9.3
-        else:
-            print(f"[Error] FABulousPower unknown PDK!")
-
         return super().get_command() + [
-            "--width",
-            x1,
-            "--height",
-            y1,
-            "--halo_left",
-            halo_left,
-            "--halo_bottom",
-            halo_bottom,
-            "--halo_right",
-            halo_right,
-            "--halo_top",
-            halo_top,
-            "--voffset",
-            self.config["PDN_VOFFSET"],
-            "--vspacing",
-            self.config["PDN_VSPACING"],
-            "--vpitch",
-            self.config["PDN_VPITCH"],
-            "--vwidth",
-            self.config["PDN_VWIDTH"],
             "--metal-layer-name",
             self.config["PDN_VERTICAL_LAYER"],
-            "--core-voffset",
-            core_voffset,
-            "--core-hoffset",
-            core_hoffset,
-            "--tile-widths",
-            ";".join(map(str, self.config["FABULOUS_TILE_WIDTHS"])),
         ]
 
 
@@ -325,11 +260,15 @@ class FABulousFabric(Classic):
             macros = {}
 
             for macro_name in tiles:
-                for supertile, subtiles in supertiles.items():
+                for supertile_name, supertile in self.fabric.superTileDic.items():
+                    subtiles = [tile.name for tile in supertile.tiles]
+
+                    # Get the anchor of the supertile (bottom left)
+                    anchor = supertile.tileMap[-1][0]
+
                     if macro_name in subtiles:
-                        # TODO hardcoded anchor
-                        if macro_name == subtiles[-1]:
-                            macro_name = supertile
+                        if macro_name == anchor.name:
+                            macro_name = supertile_name
                         else:
                             macro_name = None
 
@@ -484,13 +423,22 @@ class FABulousFabric(Classic):
 
                     prefix = f"Tile_X{x}Y{flipped_y}_"
 
-                    for supertile, subtiles in supertiles.items():
-                        if tile_name in subtiles:
-                            # TODO hardcoded anchor
-                            if tile_name == subtiles[-1]:
-                                tile_name = supertile
+                    for supertile_name, supertile in self.fabric.superTileDic.items():
 
-                                prefix = f"Tile_X{x}Y{flipped_y-1}_"
+                        subtiles = [tile.name for tile in supertile.tiles]
+
+                        # Get the anchor of the supertile (bottom left)
+                        anchor = supertile.tileMap[-1][0]
+
+                        if tile_name in subtiles:
+                            if tile_name == anchor.name:
+                                tile_name = supertile_name
+
+                                # While the physical anchor is at the bottom left,
+                                # the anchor in FABulous is at the top left
+                                prefix = (
+                                    f"Tile_X{x}Y{flipped_y-(len(supertile.tileMap)-1)}_"
+                                )
                             else:
                                 tile_name = None
 
@@ -522,9 +470,6 @@ class FABulousFabric(Classic):
 
             # Set MACROS
             self.config = self.config.copy(MACROS=macros)
-
-            # Set FABULOUS_TILE_WIDTHS
-            self.config = self.config.copy(FABULOUS_TILE_WIDTHS=column_widths)
 
             info(f'Setting MACROS to {self.config["MACROS"]}')
 
