@@ -11,7 +11,7 @@
   bitarray,
   version ? "2.0.0+887d22b9",
   rev ? "887d22b926e6400512dba12f63e634706807119e",
-  sha256 ? "sha256-WyJsXviZbGNlaXVMFCEz/8KNp8OUS5CJpmkjJsDWBi8=",
+  sha256 ? "sha256-XaDHW1Uut/QYinIDQCEpT9GticdHfuKKo3jBo8i7uvA=",
 }: let
 
   self = buildPythonPackage {
@@ -22,9 +22,11 @@
     src = fetchFromGitHub {
         owner = "FPGA-Research";
         repo = "FABulous";
-        inherit rev;
+        rev =
+          if rev == null
+          then version
+          else rev;
         inherit sha256;
-        leaveDotGit = true;
     };
 
     build-system = [
