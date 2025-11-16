@@ -43,6 +43,7 @@
   
     patches = [
         ./patches/fabulous/fix_supertile_framedata_o.patch
+        ./patches/fabulous/ignore_destination.patch
     ];
      
     dependencies = [

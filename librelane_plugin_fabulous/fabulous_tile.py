@@ -53,6 +53,7 @@ from FABulous.fabric_generator.gen_fabric.gen_tile import (
 )
 from FABulous.fabric_definition.define import IO, Side
 from FABulous.fabric_definition.Port import Port
+from FABulous.FABulous_settings import init_context
 
 __dir__ = os.path.dirname(os.path.abspath(__file__))
 _migrate_unmatched_io = lambda x: "unmatched_design" if x else "none"
@@ -323,6 +324,8 @@ class FABulousTile(Classic):
 
         # Unfortunately necessary
         os.environ["FAB_PROJ_DIR"] = "."
+
+        init_context()
 
         self.writer = VerilogCodeGenerator()
         self.fabric = parse_csv.parseFabricCSV(pathlib.Path(csv_file))

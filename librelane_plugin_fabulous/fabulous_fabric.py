@@ -46,6 +46,7 @@ from FABulous.fabric_generator.parser import parse_csv
 from FABulous.fabric_generator.gen_fabric.gen_fabric import generateFabric
 from FABulous.geometry_generator.geometry_gen import GeometryGenerator
 from FABulous.fabric_cad.gen_bitstream_spec import generateBitstreamSpec
+from FABulous.FABulous_settings import init_context
 
 __dir__ = os.path.dirname(os.path.abspath(__file__))
 
@@ -164,6 +165,8 @@ class FABulousFabric(Classic):
 
         # Unfortunately necessary
         os.environ["FAB_PROJ_DIR"] = "."
+
+        init_context()
 
         self.writer = VerilogCodeGenerator()
         self.fabric = parse_csv.parseFabricCSV(
