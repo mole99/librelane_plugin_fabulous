@@ -85,10 +85,13 @@ class FABulousPower(OdbpyStep):
         return os.path.join(os.path.dirname(__file__), "scripts", "odb_power.py")
 
     def get_command(self) -> List[str]:
-
         return super().get_command() + [
             "--metal-layer-name",
             self.config["PDN_VERTICAL_LAYER"],
+            "--power-name",
+            self.config["VDD_PIN"],
+            "--ground-name",
+            self.config["GND_PIN"],
         ]
 
 
