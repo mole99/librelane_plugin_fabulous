@@ -29,6 +29,7 @@
           callPythonPackage = lib.callPackageWith (pkgs' // pkgs'.python3.pkgs);
         in {
           fasm = callPythonPackage ./nix/fasm.nix {};
+          FABulous-bit-gen = callPythonPackage ./nix/FABulous-bit-gen.nix {};
           fabulous-fpga = callPythonPackage ./nix/fabulous-fpga.nix {};
           librelane-plugin-fabulous = callPythonPackage ./default.nix {};
         }))

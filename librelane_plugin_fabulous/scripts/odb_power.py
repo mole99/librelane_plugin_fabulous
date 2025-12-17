@@ -19,13 +19,27 @@ from reader import click_odb
     "--metal-layer-name",
     default=None,
     type=str,
-    help="Metal layer for the power/ground straps",
+    help="Metal layer for the power/ground straps.",
+)
+@click.option(
+    "--power-name",
+    default=None,
+    type=str,
+    help="The name of the power port.",
+)
+@click.option(
+    "--ground-name",
+    default=None,
+    type=str,
+    help="The name of the ground port.",
 )
 @click.command()
 @click_odb
 def power(
     reader,
     metal_layer_name: str,
+    power_name: str,
+    ground_name: str,
 ):
     # Create ground / power nets
     tech = reader.db.getTech()
@@ -35,7 +49,7 @@ def power(
 
     # Create nets, if they don't exist yet
     # TODO make this generic using VDD_NETS, GND_NETS
-    for net_name, net_type in [("VPWR", "POWER"), ("VGND", "GROUND")]:
+    for net_name, net_type in [(power_name, "POWER"), (ground_name, "GROUND")]:
         net = reader.block.findNet(net_name)
         if net is None:
             # Create net
@@ -43,8 +57,8 @@ def power(
             net.setSpecial()
             net.setSigType(net_type)
 
-    vpwr_net = reader.block.findNet("VPWR")
-    vgnd_net = reader.block.findNet("VGND")
+    vpwr_net = reader.block.findNet(power_name)
+    vgnd_net = reader.block.findNet(ground_name)
 
     # Create wires
     # vpwr_wire = vpwr_net.getSWires()[0]
@@ -53,13 +67,13 @@ def power(
     vgnd_wire = odb.dbSWire.create(vgnd_net, "ROUTED")
 
     # Create bterms (top-level)
-    vpwr_bterm = odb.dbBTerm.create(vpwr_net, "VPWR")
+    vpwr_bterm = odb.dbBTerm.create(vpwr_net, power_name)
     vpwr_bterm.setIoType("INOUT")
     vpwr_bterm.setSigType(vpwr_net.getSigType())
     vpwr_bterm.setSpecial()
     vpwr_bpin = odb.dbBPin_create(vpwr_bterm)
 
-    vgnd_bterm = odb.dbBTerm.create(vgnd_net, "VGND")
+    vgnd_bterm = odb.dbBTerm.create(vgnd_net, ground_name)
     vgnd_bterm.setIoType("INOUT")
     vgnd_bterm.setSigType(vgnd_net.getSigType())
     vgnd_bterm.setSpecial()
@@ -72,11 +86,11 @@ def power(
         for iterm in blk_inst.getITerms():
             iterm_name = iterm.getMTerm().getName()
 
-            if iterm_name == "VPWR":
+            if iterm_name == power_name:
                 print("Connecting VPWR")
                 iterm.connect(vpwr_net)
 
-            if iterm_name == "VGND":
+            if iterm_name == ground_name:
                 print("Connecting VGND")
                 iterm.connect(vgnd_net)
 
@@ -85,10 +99,10 @@ def power(
         # Now, for each power/ground mterm (TODO: check signal type instead of name)
         # Copy the geomtry of the pins to wires and top-level pins
         for master_mterm in inst_master.getMTerms():
-            if master_mterm.getName() == "VPWR" or master_mterm.getName() == "VGND":
+            if master_mterm.getName() == power_name or master_mterm.getName() == ground_name:
                 for mterm_mpins in master_mterm.getMPins():
                     for mpins_dbox in mterm_mpins.getGeometry():
-                        if master_mterm.getName() == "VPWR":
+                        if master_mterm.getName() == power_name:
                             odb.dbSBox_create(
                                 vpwr_wire,
                                 metal_layer,
@@ -107,7 +121,7 @@ def power(
                                 blk_inst.getLocation()[1] + mpins_dbox.yMax(),
                             )
 
-                        if master_mterm.getName() == "VGND":
+                        if master_mterm.getName() == ground_name:
                             odb.dbSBox_create(
                                 vgnd_wire,
                                 metal_layer,

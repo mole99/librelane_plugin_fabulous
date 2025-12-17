@@ -1,0 +1,17 @@
+diff --git a/FABulous/fabric_definition/Wire.py b/FABulous/fabric_definition/Wire.py
+index 4c04e03..fc41d3a 100644
+--- a/FABulous/fabric_definition/Wire.py
++++ b/FABulous/fabric_definition/Wire.py
+@@ -98,10 +98,10 @@ class Wire:
+                 "your source is located out side of the fabric, please check the "
+                 "source and destination port offset."
+             )
+-        if not validSourceDestination(self.destinationTile):
++        """if not validSourceDestination(self.destinationTile):
+             raise ValueError(
+                 f"Invalid destination tile name: {self.destinationTile} for wire "
+                 f"{self}, "
+                 "your destination is located out side of the fabric, please check "
+                 "the source and destination port offset."
+-            )
++            )"""

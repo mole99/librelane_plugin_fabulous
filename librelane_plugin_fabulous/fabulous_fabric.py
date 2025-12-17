@@ -46,6 +46,7 @@ from FABulous.fabric_generator.parser import parse_csv
 from FABulous.fabric_generator.gen_fabric.gen_fabric import generateFabric
 from FABulous.geometry_generator.geometry_gen import GeometryGenerator
 from FABulous.fabric_cad.gen_bitstream_spec import generateBitstreamSpec
+from FABulous.FABulous_settings import init_context
 
 __dir__ = os.path.dirname(os.path.abspath(__file__))
 
@@ -84,10 +85,13 @@ class FABulousPower(OdbpyStep):
         return os.path.join(os.path.dirname(__file__), "scripts", "odb_power.py")
 
     def get_command(self) -> List[str]:
-
         return super().get_command() + [
             "--metal-layer-name",
             self.config["PDN_VERTICAL_LAYER"],
+            "--power-name",
+            self.config["VDD_PIN"],
+            "--ground-name",
+            self.config["GND_PIN"],
         ]
 
 
@@ -164,6 +168,8 @@ class FABulousFabric(Classic):
 
         # Unfortunately necessary
         os.environ["FAB_PROJ_DIR"] = "."
+
+        init_context(api_mode=True)
 
         self.writer = VerilogCodeGenerator()
         self.fabric = parse_csv.parseFabricCSV(
