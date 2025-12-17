@@ -325,7 +325,7 @@ class FABulousTile(Classic):
         # Unfortunately necessary
         os.environ["FAB_PROJ_DIR"] = "."
 
-        init_context()
+        init_context(api_mode=True)
 
         self.writer = VerilogCodeGenerator()
         self.fabric = parse_csv.parseFabricCSV(pathlib.Path(csv_file))

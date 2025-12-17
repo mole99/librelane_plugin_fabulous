@@ -16,9 +16,9 @@
   FABulous-bit-gen,
   pyyaml,
   click,
-  version ? "2.0.0+79e8b1ab",
-  rev ? "79e8b1abc74927e77e8b7357bbe15278b8fe94bf",
-  sha256 ? "sha256-BBT4fEcdmDDUM3RAyZNGWmSt3i6ZbF4PJ400uvbUTxI=",
+  version ? "v2.0.0b4",
+  rev ? null,
+  sha256 ? "sha256-u5yjombMBFUo/CQZQyXzFiZzzbTqbsnG7dVYFpExU44=",
 }: let
 
   self = buildPythonPackage {
@@ -67,14 +67,22 @@
       substituteInPlace pyproject.toml \
         --replace "FABulous = \"FABulous.FABulous:main\"" ""
       substituteInPlace pyproject.toml \
+        --replace "fabulous = \"FABulous.FABulous:main\"" ""
+      substituteInPlace pyproject.toml \
         --replace "bit_gen = \"FABulous.fabric_cad.bit_gen:bit_gen\"" ""
-        
+
+      substituteInPlace pyproject.toml \
+        --replace "pydantic>=2.12.1" "pydantic>=2.11.1"
       substituteInPlace pyproject.toml \
         --replace "pydantic-settings>=2.10.1" "pydantic-settings>=2.8.1"
+      substituteInPlace pyproject.toml \
+        --replace "typer>=0.20.0" "pydantic-settings>=0.15.2"
       substituteInPlace pyproject.toml \
         --replace "packaging>=25.0" "packaging>=24.2"
       substituteInPlace pyproject.toml \
         --replace "typer>=0.16.1" "typer>=0.15.2"
+      substituteInPlace pyproject.toml \
+        --replace "\"librelane>=3.0.0.dev43\"," ""
     '';
     
   };
