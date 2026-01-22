@@ -2,7 +2,7 @@
   fetchFromGitHub,
   buildPythonPackage,
   setuptools,
-  setuptools_scm,
+  setuptools-scm,
   python-dotenv,
   loguru,
   requests,
@@ -19,7 +19,8 @@
   version ? "v2.0.0b4",
   rev ? null,
   sha256 ? "sha256-u5yjombMBFUo/CQZQyXzFiZzzbTqbsnG7dVYFpExU44=",
-}: let
+}:
+let
 
   self = buildPythonPackage {
     pname = "FABulous";
@@ -27,25 +28,22 @@
     inherit version;
 
     src = fetchFromGitHub {
-        owner = "FPGA-Research";
-        repo = "FABulous";
-        rev =
-          if rev == null
-          then version
-          else rev;
-        inherit sha256;
+      owner = "FPGA-Research";
+      repo = "FABulous";
+      rev = if rev == null then version else rev;
+      inherit sha256;
     };
 
     build-system = [
-        setuptools
-        setuptools_scm
-      ];
-  
-    patches = [
-        ./patches/fabulous/fix_supertile_framedata_o.patch
-        ./patches/fabulous/ignore_destination.patch
+      setuptools
+      setuptools-scm
     ];
-     
+
+    patches = [
+      ./patches/fabulous/fix_supertile_framedata_o.patch
+      ./patches/fabulous/ignore_destination.patch
+    ];
+
     dependencies = [
       python-dotenv
       loguru
@@ -61,7 +59,7 @@
       pyyaml
       click
     ];
-    
+
     # Remove the executables as they make problems with Nix?
     postPatch = ''
       substituteInPlace pyproject.toml \
@@ -84,7 +82,7 @@
       substituteInPlace pyproject.toml \
         --replace "\"librelane>=3.0.0.dev43\"," ""
     '';
-    
+
   };
 in
-  self
+self
