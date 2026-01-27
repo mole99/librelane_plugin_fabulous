@@ -469,6 +469,8 @@ def io_place(
                     (DIE_AREA.yMax() - DIE_AREA.yMin())
                     * segments_n
                     / len(pin_placement["E"])
+                    // h_step
+                    * h_step  # TODO: maybe add one hstep here
                 ),
                 count // len(pin_placement["E"]),
                 h_step,
@@ -491,6 +493,8 @@ def io_place(
                     (DIE_AREA.yMax() - DIE_AREA.yMin())
                     * segments_n
                     / len(pin_placement["W"])
+                    // h_step
+                    * h_step  # TODO: maybe add one hstep here
                 ),
                 count // len(pin_placement["W"]),
                 h_step,
@@ -518,6 +522,8 @@ def io_place(
                     (DIE_AREA.xMax() - DIE_AREA.xMin())
                     * segments_n
                     / len(pin_placement["N"])
+                    // h_step
+                    * h_step  # TODO: maybe add one hstep here
                 ),
                 count // len(pin_placement["N"]),
                 v_step,
@@ -540,6 +546,8 @@ def io_place(
                     (DIE_AREA.xMax() - DIE_AREA.xMin())
                     * segments_n
                     / len(pin_placement["S"])
+                    // h_step
+                    * h_step  # TODO: maybe add one hstep here
                 ),
                 count // len(pin_placement["S"]),
                 v_step,
@@ -577,6 +585,8 @@ def io_place(
     print(len(v_tracks_0))
     print(len(v_tracks_1))
     """
+
+    print("Creating pin_tracks!")
 
     pin_tracks = {"N": [], "E": [], "W": [], "S": []}
     for side, segments in pin_placement.items():
@@ -621,7 +631,7 @@ def io_place(
                     ]
                 )
 
-    print(pin_tracks)
+        print(f"pin_tracks {side}: {pin_tracks[side]}")
 
     # reversals (including randomly-assigned pins, if needed)
     for side, segments in info_by_side.items():

@@ -99,7 +99,10 @@ def power(
         # Now, for each power/ground mterm (TODO: check signal type instead of name)
         # Copy the geomtry of the pins to wires and top-level pins
         for master_mterm in inst_master.getMTerms():
-            if master_mterm.getName() == power_name or master_mterm.getName() == ground_name:
+            if (
+                master_mterm.getName() == power_name
+                or master_mterm.getName() == ground_name
+            ):
                 for mterm_mpins in master_mterm.getMPins():
                     for mpins_dbox in mterm_mpins.getGeometry():
                         if master_mterm.getName() == power_name:

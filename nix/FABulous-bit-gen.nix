@@ -2,13 +2,14 @@
   fetchFromGitHub,
   buildPythonPackage,
   setuptools,
-  setuptools_scm,
+  setuptools-scm,
   loguru,
   fasm,
   version ? "v0.1.0",
   rev ? null,
   sha256 ? "sha256-nrRcqoWIPXcE/jnqq64zw6aCyFkumeF78YiaZ0JyaU0=",
-}: let
+}:
+let
 
   self = buildPythonPackage {
     pname = "FABulous-bit-gen";
@@ -16,25 +17,22 @@
     inherit version;
 
     src = fetchFromGitHub {
-        owner = "FPGA-Research";
-        repo = "FABulous-bit-gen";
-        rev =
-          if rev == null
-          then version
-          else rev;
-        inherit sha256;
+      owner = "FPGA-Research";
+      repo = "FABulous-bit-gen";
+      rev = if rev == null then version else rev;
+      inherit sha256;
     };
 
     build-system = [
-        setuptools
-        setuptools_scm
-      ];
-     
+      setuptools
+      setuptools-scm
+    ];
+
     dependencies = [
       loguru
       fasm
     ];
-    
+
   };
 in
-  self
+self

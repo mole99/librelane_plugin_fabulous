@@ -6,7 +6,8 @@
   version ? "v0.0.2",
   rev ? null,
   sha256 ? "sha256-AMG4+qMk2+40GllhE8UShagN/jxSVN+RNtJCW3vFLBU=",
-}: let
+}:
+let
 
   self = buildPythonPackage {
     pname = "fasm";
@@ -14,23 +15,20 @@
     inherit version;
 
     src = fetchFromGitHub {
-        owner = "chipsalliance";
-        repo = "fasm";
-        rev =
-          if rev == null
-          then version
-          else rev;
-        inherit sha256;
+      owner = "chipsalliance";
+      repo = "fasm";
+      rev = if rev == null then version else rev;
+      inherit sha256;
     };
 
     build-system = [
-        setuptools
+      setuptools
     ];
-     
+
     dependencies = [
-        textx
+      textx
     ];
 
   };
 in
-  self
+self

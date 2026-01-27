@@ -5,7 +5,8 @@
   poetry-core,
   setuptools,
   fabulous-fpga,
-}: let
+}:
+let
   self = buildPythonPackage {
     name = "librelane_plugin_fabulous";
 
@@ -26,11 +27,9 @@
       fabulous-fpga
     ];
 
-    propagatedBuildInputs =
-      self.includedTools
-      ++ [
-        librelane
-      ];
+    propagatedBuildInputs = self.includedTools ++ [
+      librelane
+    ];
   };
 in
-  self
+self
