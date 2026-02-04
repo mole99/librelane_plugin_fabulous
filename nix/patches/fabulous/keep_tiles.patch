@@ -1,0 +1,13 @@
+diff --git a/FABulous/fabric_generator/gen_fabric/gen_fabric.py b/FABulous/fabric_generator/gen_fabric/gen_fabric.py
+index d3b83ba..ddc251d 100644
+--- a/FABulous/fabric_generator/gen_fabric/gen_fabric.py
++++ b/FABulous/fabric_generator/gen_fabric/gen_fabric.py
+@@ -341,7 +341,7 @@ def generateFabric(writer: CodeGenerator, fabric: Fabric) -> None:
+ 
+             writer.addNewLine()
+             writer.addComment(
+-                "tile IO port will get directly connected to top-level tile module",
++                "tile IO port will get directly connected to top-level tile module\n (* keep *)",
+                 onNewLine=True,
+                 indentLevel=0,
+             )
