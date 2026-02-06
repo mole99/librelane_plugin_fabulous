@@ -95,23 +95,117 @@ class FABulousPower(OdbpyStep):
         ]
 
 
+@Step.factory.register()
+class FABulousPins(OdbpyStep):
+
+    id = "Odb.FABulousPins"
+    name = "FABulous pin placement based on macro tiles"
+
+    config_vars = pdn_variables
+
+    def get_script_path(self):
+        return os.path.join(os.path.dirname(__file__), "scripts", "odb_pins.py")
+
+    def get_command(self) -> List[str]:
+        return super().get_command()
+
+
+DesignFormat(
+    "fabulous",
+    "v",
+    "FABulous fabric netlist",
+    alts=["FABULOUS_NETLIST"],
+).register()
+
+DesignFormat(
+    "fabulous",
+    "csv",
+    "FABulous fabric geometry",
+    alts=["FABULOUS_GEOMETRY"],
+).register()
+
+DesignFormat(
+    "fabulous",
+    "bin",
+    "FABulous bitstream specification (binary)",
+    alts=["FABULOUS_BITSTREAMSPEC_BIN"],
+).register()
+
+DesignFormat(
+    "fabulous",
+    "csv",
+    "FABulous bitstream specification (binary)",
+    alts=["FABULOUS_BITSTREAMSPEC_CSV"],
+).register()
+
+DesignFormat(
+    "fabulous/.FABulous",
+    "txt",
+    "FABulous Programmagle Interconnect Points",
+    alts=["FABULOUS_PIPS"],
+).register()
+
+DesignFormat(
+    "fabulous/.FABulous",
+    "txt",
+    "FABulous Basic Element",
+    alts=["FABULOUS_BELS"],
+).register()
+
+DesignFormat(
+    "fabulous/.FABulous",
+    "v2.txt",
+    "FABulous Basic Elements v2",
+    alts=["FABULOUS_BELS_V2"],
+).register()
+
+DesignFormat(
+    "fabulous",
+    "pcf",
+    "FABulous Physical Constraint File",
+    alts=["FABULOUS_PCF"],
+).register()
+
 Classic = Flow.factory.get("Classic")
 
 
 @Flow.factory.register()
 class FABulousFabric(Classic):
+    """
+    A flow to implement a FABulous fabric out of individual tile macros.
+    """
+
     Substitutions = [
+        # No standard cell rows
+        ("OpenROAD.CutRows", None),
+        ("OpenROAD.TapEndcapInsertion", None),
+        # Script to manually place individual IO pins
+        # ("+OpenROAD.GlobalPlacementSkipIO", FABulousManualIOPlacement),
+        # Script to place IO pins based on the tile macros
+        ("+OpenROAD.GlobalPlacementSkipIO", FABulousPins),
+        # No placement of standard cells
+        # and no pin placement
+        ("OpenROAD.GlobalPlacementSkipIO", None),
+        ("OpenROAD.IOPlacement", None),
+        ("Odb.CustomIOPlacement", None),
+        ("Odb.ApplyDEFTemplate", None),
+        ("OpenROAD.GlobalPlacement", None),
+        ("Odb.ManualGlobalPlacement", None),
+        ("OpenROAD.DetailedPlacement", None),
         # Disable STA
-        ("OpenROAD.STAPrePNR", None),
-        ("OpenROAD.STAMidPNR", None),
-        ("OpenROAD.STAMidPNR", None),
-        ("OpenROAD.STAMidPNR", None),
-        ("OpenROAD.STAMidPNR", None),
-        ("OpenROAD.STAPostPNR", None),
+        ("OpenROAD.STA*", None),
         # Custom PDN generation script
         ("OpenROAD.GeneratePDN", FABulousPower),
-        # Script to manually place single IOs
-        ("+OpenROAD.GlobalPlacementSkipIO", FABulousManualIOPlacement),
+        # Disable routing and antenna
+        # ("OpenROAD.GlobalRouting", None),
+        # ("OpenROAD.CheckAntennas*", None),
+        ("OpenROAD.RepairAntennas*", None),
+        ("OpenROAD.Repair*", None),
+        ("OpenROAD.Resizer*", None),
+        ("OpenROAD.DetailedRouting", None),
+        # It seems when we have no wires,
+        # OpenRCX won't write a spef file
+        ("OpenROAD.RCX", None),
     ]
 
     config_vars = Classic.config_vars + [
@@ -188,10 +282,22 @@ class FABulousFabric(Classic):
         )
         generateFabric(self.writer, self.fabric)
 
+        initial_state = State(
+            copying=initial_state,
+            overrides={"FABULOUS_NETLIST": Path(self.writer.outFileName)},
+        )
+
         self.geometryGenerator = GeometryGenerator(self.fabric)
         self.geometryGenerator.generateGeometry()
         self.geometryGenerator.saveToCSV(
             pathlib.Path(os.path.join(self.run_dir, f"geometry.csv"))
+        )
+
+        initial_state = State(
+            copying=initial_state,
+            overrides={
+                "FABULOUS_GEOMETRY": Path(os.path.join(self.run_dir, f"geometry.csv"))
+            },
         )
 
         # Export bitstream spec
@@ -206,6 +312,24 @@ class FABulousFabric(Classic):
                 for key2, val in specObject["TileSpecs"][key1].items():
                     w.writerow([key2, val])
 
+        initial_state = State(
+            copying=initial_state,
+            overrides={
+                "FABULOUS_BITSTREAMSPEC_BIN": Path(
+                    os.path.join(self.run_dir, f"bitStreamSpec.bin")
+                )
+            },
+        )
+
+        initial_state = State(
+            copying=initial_state,
+            overrides={
+                "FABULOUS_BITSTREAMSPEC_CSV": Path(
+                    os.path.join(self.run_dir, f"bitStreamSpec.csv")
+                )
+            },
+        )
+
         # Export nextpnr model
         npnrModel = model_gen_npnr.genNextpnrModel(self.fabric)
         with open(os.path.join(self.run_dir, f"pips.txt"), "w") as f:
@@ -219,6 +343,30 @@ class FABulousFabric(Classic):
 
         with open(os.path.join(self.run_dir, f"template.pcf"), "w") as f:
             f.write(npnrModel[3])
+
+        initial_state = State(
+            copying=initial_state,
+            overrides={"FABULOUS_PIPS": Path(os.path.join(self.run_dir, f"pips.txt"))},
+        )
+
+        initial_state = State(
+            copying=initial_state,
+            overrides={"FABULOUS_BELS": Path(os.path.join(self.run_dir, f"bel.txt"))},
+        )
+
+        initial_state = State(
+            copying=initial_state,
+            overrides={
+                "FABULOUS_BELS_V2": Path(os.path.join(self.run_dir, f"bel.v2.txt"))
+            },
+        )
+
+        initial_state = State(
+            copying=initial_state,
+            overrides={
+                "FABULOUS_PCF": Path(os.path.join(self.run_dir, f"template.pcf"))
+            },
+        )
 
         # Get the fabric Verilog file
         verilog_files.append(os.path.join(self.run_dir, f"{self.fabric.name}.v"))
@@ -486,58 +634,8 @@ class FABulousFabric(Classic):
 
         info(f'Setting VERILOG_FILES to {self.config["VERILOG_FILES"]}')
 
-        print(self.config)
+        print(f"Final config: {self.config}")
 
         (final_state, steps) = super().run(initial_state, **kwargs)
-
-        final_views_path = os.path.abspath(
-            os.path.join(".", "macro", self.config["PDK"])
-        )
-        info(f"Saving final views for FABulous to {final_views_path}")
-        final_state.save_snapshot(final_views_path)
-
-        info(f"Copying FABulous related files.")
-        fabulous_path = os.path.abspath(
-            os.path.join(".", "macro", self.config["PDK"], "fabulous")
-        )
-        fabulous_hidden_path = os.path.join(fabulous_path, ".FABulous")
-
-        os.makedirs(fabulous_path, exist_ok=True)
-        os.makedirs(fabulous_hidden_path, exist_ok=True)
-
-        shutil.copy(
-            os.path.join(self.run_dir, f"{self.fabric.name}.v"),
-            os.path.join(fabulous_path, f"{self.fabric.name}.v"),
-        )
-        shutil.copy(
-            os.path.join(self.run_dir, f"geometry.csv"),
-            os.path.join(fabulous_path, f"geometry.csv"),
-        )
-        shutil.copy(
-            os.path.join(self.run_dir, f"bitStreamSpec.bin"),
-            os.path.join(fabulous_path, f"bitStreamSpec.bin"),
-        )
-        shutil.copy(
-            os.path.join(self.run_dir, f"bitStreamSpec.csv"),
-            os.path.join(fabulous_path, f"bitStreamSpec.csv"),
-        )
-        shutil.copy(
-            os.path.join(self.run_dir, f"template.pcf"),
-            os.path.join(fabulous_path, f"template.pcf"),
-        )
-
-        # Hidden files, they need to be in .FABulous
-        shutil.copy(
-            os.path.join(self.run_dir, f"pips.txt"),
-            os.path.join(fabulous_hidden_path, f"pips.txt"),
-        )
-        shutil.copy(
-            os.path.join(self.run_dir, f"bel.txt"),
-            os.path.join(fabulous_hidden_path, f"bel.txt"),
-        )
-        shutil.copy(
-            os.path.join(self.run_dir, f"bel.v2.txt"),
-            os.path.join(fabulous_hidden_path, f"bel.v2.txt"),
-        )
 
         return (final_state, steps)

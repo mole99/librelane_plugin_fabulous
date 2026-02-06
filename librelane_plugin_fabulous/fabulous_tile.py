@@ -306,6 +306,7 @@ class FABulousTile(Classic):
             f.write(
                 'SuperTileEnable,{"TRUE" if self.config["FABULOUS_SUPERTILE"] else "FALSE"}\n'
             )  # TRUE/FALSE
+            f.write("DisableUserCLK,TRUE\n")
 
             if self.config["FABULOUS_SUPERTILE"]:
                 for tile in supertile_tiles:
