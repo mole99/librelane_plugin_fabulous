@@ -16,9 +16,9 @@
   FABulous-bit-gen,
   pyyaml,
   click,
-  version ? "1.0.0",
-  rev ? "disable-UserCLK",
-  sha256 ? "sha256-9yj2Rqhx/6l6XPqGEmqGUnaEi21UUc872p24guhC2NU=",
+  version ? "2.0.0-44878389",
+  rev ? "4487838902a66c1ed3c90a8949f60457c5a1316a",
+  sha256 ? "sha256-ZSNMn7oxGR0Clrz9AOrqlh7HwszlqYNYrc1R9L0Olh0=",
 }:
 let
 
