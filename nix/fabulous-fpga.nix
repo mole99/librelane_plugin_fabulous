@@ -16,6 +16,8 @@
   FABulous-bit-gen,
   pyyaml,
   click,
+  numpy,
+  pymoo,
   version ? "2.0.0-44878389",
   rev ? "4487838902a66c1ed3c90a8949f60457c5a1316a",
   sha256 ? "sha256-ZSNMn7oxGR0Clrz9AOrqlh7HwszlqYNYrc1R9L0Olh0=",
@@ -59,6 +61,8 @@ let
       FABulous-bit-gen
       pyyaml
       click
+      numpy
+      pymoo
     ];
 
     # Remove the executables as they make problems with Nix?
@@ -78,6 +82,8 @@ let
         --replace "packaging>=25.0" "packaging>=24.2"
       substituteInPlace pyproject.toml \
         --replace "\"librelane>=3.0.0.dev43\"," ""
+      substituteInPlace pyproject.toml \
+        --replace "numpy>=2.3.5" "numpy>=2.3.4"
     '';
 
   };
