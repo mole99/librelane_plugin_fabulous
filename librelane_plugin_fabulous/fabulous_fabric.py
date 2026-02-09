@@ -206,6 +206,8 @@ class FABulousFabric(Classic):
         # It seems when we have no wires,
         # OpenRCX won't write a spef file
         ("OpenROAD.RCX", None),
+        # No IR drop without a spef
+        ("OpenROAD.IRDropReport", None),
     ]
 
     config_vars = Classic.config_vars + [
