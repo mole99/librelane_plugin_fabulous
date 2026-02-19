@@ -234,11 +234,6 @@ class FABulousFabric(Classic):
             default=[100, 100, 100, 100],
         ),
         Variable(
-            "FABULOUS_TILE_SIZES",
-            Dict[str, Tuple[Decimal, Decimal]],
-            "The macro size for each tile, names are matched using a regex. First match is used.",
-        ),
-        Variable(
             "FABULOUS_SPEF_CORNERS",
             Optional[List[str]],
             "The SPEF corners to use for the tile macros.",
@@ -489,21 +484,38 @@ class FABulousFabric(Classic):
                 HALO_SPACING[3],
             )
 
-            info(f'FABULOUS_TILE_SIZES: {self.config["FABULOUS_TILE_SIZES"]}')
-
+            # Get the tile sizes from the LEF
             tile_sizes = {}
+            for macro_name, values in macros.items():
+                lef_file = values["lef"][0]
+                # Parse LEF size such as: "  SIZE 68.640 BY 219.240 ;"
+                with open(lef_file, "r") as f:
+                    while line := f.readline():
+                        #   SIZE 784.48 BY 64.36 ;
+                        if "SIZE" in line:
+                            parts = line.strip().split(" ")
+                            tile_width, tile_height = (
+                                Decimal(parts[1]),
+                                Decimal(parts[3]),
+                            )
 
-            # Get the tile sizes for each individual tile
-            for tile_name in self.fabric.tileDic:
-                tile_size = None
-                for pattern in self.config["FABULOUS_TILE_SIZES"]:
-                    if fnmatch.fnmatch(tile_name, pattern):
-                        tile_size = self.config["FABULOUS_TILE_SIZES"][pattern]
-                        break
+                # Is it a supertile?
+                if macro_name in self.fabric.superTileDic:
+                    supertile = self.fabric.superTileDic[macro_name]
+                    subtiles = [tile.name for tile in supertile.tiles]
 
-                if tile_size == None:
-                    err(f"Could not match {tile_name} with FABULOUS_TILE_SIZES")
-                tile_sizes[tile_name] = tile_size
+                    num_tiles_y = len(supertile.tileMap)
+                    num_tiles_x = len(supertile.tileMap[0])
+
+                    for tile in subtiles:
+                        tile_name = tile
+                        tile_sizes[tile_name] = (
+                            tile_width / num_tiles_x,
+                            tile_height / num_tiles_y,
+                        )
+                else:
+                    tile_name = macro_name
+                    tile_sizes[tile_name] = (tile_width, tile_height)
 
             info(f"Tile sizes: {tile_sizes}")
 
