@@ -246,6 +246,11 @@ class FABulousTile(Classic):
         ("OpenROAD.STAMidPNR", None),
         ("OpenROAD.STAMidPNR", None),
         ("OpenROAD.STAPostPNR", None),
+        # Don't resize/repair any buffers
+        ("OpenROAD.Resizer*", None),
+        ("OpenROAD.RepairDesign*", None),
+        # But do add buffers if explicitly wished
+        ("+OpenROAD.GlobalPlacement", AddBuffers),
     ]
 
     config_vars = Classic.config_vars + [
