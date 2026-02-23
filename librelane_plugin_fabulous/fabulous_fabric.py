@@ -87,7 +87,7 @@ class FABulousPower(OdbpyStep):
     def get_command(self) -> List[str]:
         return super().get_command() + [
             "--metal-layer-name",
-            self.config["PDN_VERTICAL_LAYER"],
+            self.config["RT_MAX_LAYER"],
             "--power-name",
             self.config["VDD_PIN"],
             "--ground-name",
