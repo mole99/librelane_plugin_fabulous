@@ -18,10 +18,12 @@
   click,
   numpy,
   pymoo,
+  networkx,
   pick,
+  sdf-timing,
   version ? "2.0.0",
-  rev ? "856654f96d7ba97effd42651ba148c43f9752b23",
-  sha256 ? "sha256-DwZERuxaCGPeoXjciZ5lq/+YxzCV/zGSjchRUJzwcdI=",
+  rev ? "51f7c4e48b7a41370b50b593c88c21c0baf908fe",
+  sha256 ? "sha256-SEvc/pdwNrDL4WolWW8Q+nZi1tnFfLHYIRoVLcdsa6g=",
 }:
 let
 
@@ -31,7 +33,7 @@ let
     inherit version;
 
     src = fetchFromGitHub {
-      owner = "FPGA-Research";
+      owner = "hausdinge";
       repo = "FABulous";
       rev = if rev == null then version else rev;
       inherit sha256;
@@ -65,7 +67,9 @@ let
       click
       numpy
       pymoo
+      networkx
       pick
+      sdf-timing
     ];
 
     # Remove the executables as they make problems with Nix?
@@ -87,6 +91,8 @@ let
         --replace "\"librelane>=3.0.0.dev43\"," ""
       substituteInPlace pyproject.toml \
         --replace "numpy>=2.3.5" "numpy>=2.3.4"
+      substituteInPlace pyproject.toml \
+        --replace "networkx>=3.6.1" "networkx>=3.5.0"
       substituteInPlace pyproject.toml \
         --replace "\"ciel>=2.4.0\"," ""
     '';

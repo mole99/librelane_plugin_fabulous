@@ -34,6 +34,7 @@
             in
             {
               fasm = callPythonPackage ./nix/fasm.nix { };
+              sdf-timing = callPythonPackage ./nix/sdf-timing.nix { };
               FABulous-bit-gen = callPythonPackage ./nix/FABulous-bit-gen.nix { };
               fabulous-fpga = callPythonPackage ./nix/fabulous-fpga.nix { };
               librelane-plugin-fabulous = callPythonPackage ./default.nix { };
