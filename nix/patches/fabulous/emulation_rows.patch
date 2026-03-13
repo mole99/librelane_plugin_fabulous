@@ -1,8 +1,8 @@
-diff --git a/FABulous/fabric_generator/gen_fabric/gen_fabric.py b/FABulous/fabric_generator/gen_fabric/gen_fabric.py
-index d3b83ba..ca3eccf 100644
---- a/FABulous/fabric_generator/gen_fabric/gen_fabric.py
-+++ b/FABulous/fabric_generator/gen_fabric/gen_fabric.py
-@@ -516,19 +516,17 @@ def generateFabric(writer: CodeGenerator, fabric: Fabric) -> None:
+diff --git a/fabulous/fabric_generator/gen_fabric/gen_fabric.py b/fabulous/fabric_generator/gen_fabric/gen_fabric.py
+index 87858963..c3d4a6d4 100644
+--- a/fabulous/fabric_generator/gen_fabric/gen_fabric.py
++++ b/fabulous/fabric_generator/gen_fabric/gen_fabric.py
+@@ -521,19 +521,17 @@ def generateFabric(writer: CodeGenerator, fabric: Fabric) -> None:
              if superTile:
                  name = superTile.name
                  for i, j in tileLocationOffset:

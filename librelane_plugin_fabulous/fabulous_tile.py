@@ -41,19 +41,19 @@ from librelane.steps.common_variables import (
     rsz_variables,
 )
 
-from FABulous.fabric_generator.parser import parse_csv
-from FABulous.fabric_generator.gen_fabric.gen_switchmatrix import genTileSwitchMatrix
-from FABulous.fabric_generator.gen_fabric.gen_configmem import generateConfigMem
-from FABulous.fabric_generator.code_generator.code_generator_Verilog import (
+from fabulous.fabric_generator.parser import parse_csv
+from fabulous.fabric_generator.gen_fabric.gen_switchmatrix import genTileSwitchMatrix
+from fabulous.fabric_generator.gen_fabric.gen_configmem import generateConfigMem
+from fabulous.fabric_generator.code_generator.code_generator_Verilog import (
     VerilogCodeGenerator,
 )
-from FABulous.fabric_generator.gen_fabric.gen_tile import (
+from fabulous.fabric_generator.gen_fabric.gen_tile import (
     generateSuperTile,
     generateTile,
 )
-from FABulous.fabric_definition.define import IO, Side
-from FABulous.fabric_definition.Port import Port
-from FABulous.FABulous_settings import init_context
+from fabulous.fabric_definition.define import IO, Side
+from fabulous.fabric_definition.port import Port
+from fabulous.fabulous_settings import init_context
 
 __dir__ = os.path.dirname(os.path.abspath(__file__))
 _migrate_unmatched_io = lambda x: "unmatched_design" if x else "none"

@@ -38,15 +38,15 @@ from librelane.steps import (
     Misc,
 )
 from librelane.steps.common_variables import pdn_variables
-import FABulous.fabric_cad.gen_npnr_model as model_gen_npnr
-from FABulous.fabric_generator.code_generator.code_generator_Verilog import (
+import fabulous.fabric_cad.gen_npnr_model as model_gen_npnr
+from fabulous.fabric_generator.code_generator.code_generator_Verilog import (
     VerilogCodeGenerator,
 )
-from FABulous.fabric_generator.parser import parse_csv
-from FABulous.fabric_generator.gen_fabric.gen_fabric import generateFabric
-from FABulous.geometry_generator.geometry_gen import GeometryGenerator
-from FABulous.fabric_cad.gen_bitstream_spec import generateBitstreamSpec
-from FABulous.FABulous_settings import init_context
+from fabulous.fabric_generator.parser import parse_csv
+from fabulous.fabric_generator.gen_fabric.gen_fabric import generateFabric
+from fabulous.geometry_generator.geometry_gen import GeometryGenerator
+from fabulous.fabric_cad.gen_bitstream_spec import generateBitstreamSpec
+from fabulous.fabulous_settings import init_context
 
 __dir__ = os.path.dirname(os.path.abspath(__file__))
 

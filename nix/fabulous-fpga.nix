@@ -18,9 +18,10 @@
   click,
   numpy,
   pymoo,
-  version ? "2.0.0-44878389",
-  rev ? "4487838902a66c1ed3c90a8949f60457c5a1316a",
-  sha256 ? "sha256-ZSNMn7oxGR0Clrz9AOrqlh7HwszlqYNYrc1R9L0Olh0=",
+  pick,
+  version ? "2.0.0",
+  rev ? "f7fd0c944716bc79e9cb2a7a1f73e0d6dd4dedae",
+  sha256 ? "sha256-wPS1GOq4mF5aGFbD1n1hYY0t651uY0jevAnhhUsun6E=",
 }:
 let
 
@@ -64,14 +65,15 @@ let
       click
       numpy
       pymoo
+      pick
     ];
 
     # Remove the executables as they make problems with Nix?
     postPatch = ''
       substituteInPlace pyproject.toml \
-        --replace "FABulous = \"FABulous.FABulous:main\"" ""
+        --replace "FABulous = \"fabulous.fabulous:main\"" ""
       substituteInPlace pyproject.toml \
-        --replace "fabulous = \"FABulous.FABulous:main\"" ""
+        --replace "fabulous = \"fabulous.fabulous:main\"" ""
 
       substituteInPlace pyproject.toml \
         --replace "pydantic>=2.12.1" "pydantic>=2.11.1"
@@ -85,6 +87,8 @@ let
         --replace "\"librelane>=3.0.0.dev43\"," ""
       substituteInPlace pyproject.toml \
         --replace "numpy>=2.3.5" "numpy>=2.3.4"
+      substituteInPlace pyproject.toml \
+        --replace "\"ciel>=2.4.0\"," ""
     '';
 
   };
