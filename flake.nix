@@ -70,13 +70,12 @@
         system:
         let
           pkgs = (self.legacyPackages.${system});
+          callPackage = lib.callPackageWith pkgs;
         in
         {
-          default = lib.callPackageWith pkgs (pkgs.createLibreLaneShell {
-            librelane-plugins = with pkgs.python3.pkgs; [
-              librelane-plugin-fabulous
-            ];
-          }) { };
+          default = pkgs.librelane-shell.override ({
+            librelane-plugins = ps: with ps; [librelane-plugin-fabulous];
+          });
         }
       );
     };

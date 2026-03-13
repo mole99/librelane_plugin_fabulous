@@ -105,43 +105,45 @@ def power(
             ):
                 for mterm_mpins in master_mterm.getMPins():
                     for mpins_dbox in mterm_mpins.getGeometry():
-                        if master_mterm.getName() == power_name:
-                            odb.dbSBox_create(
-                                vpwr_wire,
-                                metal_layer,
-                                blk_inst.getLocation()[0] + mpins_dbox.xMin(),
-                                blk_inst.getLocation()[1] + mpins_dbox.yMin(),
-                                blk_inst.getLocation()[0] + mpins_dbox.xMax(),
-                                blk_inst.getLocation()[1] + mpins_dbox.yMax(),
-                                "STRIPE",
-                            )
-                            odb.dbBox_create(
-                                vpwr_bpin,
-                                metal_layer,
-                                blk_inst.getLocation()[0] + mpins_dbox.xMin(),
-                                blk_inst.getLocation()[1] + mpins_dbox.yMin(),
-                                blk_inst.getLocation()[0] + mpins_dbox.xMax(),
-                                blk_inst.getLocation()[1] + mpins_dbox.yMax(),
-                            )
+                        # Check that the metal layer matches
+                        if mpins_dbox.getTechLayer().getName() == metal_layer_name:
+                            if master_mterm.getName() == power_name:
+                                odb.dbSBox_create(
+                                    vpwr_wire,
+                                    metal_layer,
+                                    blk_inst.getLocation()[0] + mpins_dbox.xMin(),
+                                    blk_inst.getLocation()[1] + mpins_dbox.yMin(),
+                                    blk_inst.getLocation()[0] + mpins_dbox.xMax(),
+                                    blk_inst.getLocation()[1] + mpins_dbox.yMax(),
+                                    "STRIPE",
+                                )
+                                odb.dbBox_create(
+                                    vpwr_bpin,
+                                    metal_layer,
+                                    blk_inst.getLocation()[0] + mpins_dbox.xMin(),
+                                    blk_inst.getLocation()[1] + mpins_dbox.yMin(),
+                                    blk_inst.getLocation()[0] + mpins_dbox.xMax(),
+                                    blk_inst.getLocation()[1] + mpins_dbox.yMax(),
+                                )
 
-                        if master_mterm.getName() == ground_name:
-                            odb.dbSBox_create(
-                                vgnd_wire,
-                                metal_layer,
-                                blk_inst.getLocation()[0] + mpins_dbox.xMin(),
-                                blk_inst.getLocation()[1] + mpins_dbox.yMin(),
-                                blk_inst.getLocation()[0] + mpins_dbox.xMax(),
-                                blk_inst.getLocation()[1] + mpins_dbox.yMax(),
-                                "STRIPE",
-                            )
-                            odb.dbBox_create(
-                                vgnd_bpin,
-                                metal_layer,
-                                blk_inst.getLocation()[0] + mpins_dbox.xMin(),
-                                blk_inst.getLocation()[1] + mpins_dbox.yMin(),
-                                blk_inst.getLocation()[0] + mpins_dbox.xMax(),
-                                blk_inst.getLocation()[1] + mpins_dbox.yMax(),
-                            )
+                            if master_mterm.getName() == ground_name:
+                                odb.dbSBox_create(
+                                    vgnd_wire,
+                                    metal_layer,
+                                    blk_inst.getLocation()[0] + mpins_dbox.xMin(),
+                                    blk_inst.getLocation()[1] + mpins_dbox.yMin(),
+                                    blk_inst.getLocation()[0] + mpins_dbox.xMax(),
+                                    blk_inst.getLocation()[1] + mpins_dbox.yMax(),
+                                    "STRIPE",
+                                )
+                                odb.dbBox_create(
+                                    vgnd_bpin,
+                                    metal_layer,
+                                    blk_inst.getLocation()[0] + mpins_dbox.xMin(),
+                                    blk_inst.getLocation()[1] + mpins_dbox.yMin(),
+                                    blk_inst.getLocation()[0] + mpins_dbox.xMax(),
+                                    blk_inst.getLocation()[1] + mpins_dbox.yMax(),
+                                )
 
     vpwr_bpin.setPlacementStatus("FIRM")
     vgnd_bpin.setPlacementStatus("FIRM")

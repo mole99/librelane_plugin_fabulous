@@ -41,22 +41,47 @@ from librelane.steps.common_variables import (
     rsz_variables,
 )
 
-from FABulous.fabric_generator.parser import parse_csv
-from FABulous.fabric_generator.gen_fabric.gen_switchmatrix import genTileSwitchMatrix
-from FABulous.fabric_generator.gen_fabric.gen_configmem import generateConfigMem
-from FABulous.fabric_generator.code_generator.code_generator_Verilog import (
+from fabulous.fabric_generator.parser import parse_csv
+from fabulous.fabric_generator.gen_fabric.gen_switchmatrix import genTileSwitchMatrix
+from fabulous.fabric_generator.gen_fabric.gen_configmem import generateConfigMem
+from fabulous.fabric_generator.code_generator.code_generator_Verilog import (
     VerilogCodeGenerator,
 )
-from FABulous.fabric_generator.gen_fabric.gen_tile import (
+from fabulous.fabric_generator.gen_fabric.gen_tile import (
     generateSuperTile,
     generateTile,
 )
-from FABulous.fabric_definition.define import IO, Side
-from FABulous.fabric_definition.Port import Port
-from FABulous.FABulous_settings import init_context
+from fabulous.fabric_definition.define import IO, Side
+from fabulous.fabric_definition.port import Port
+from fabulous.fabulous_settings import init_context
 
 __dir__ = os.path.dirname(os.path.abspath(__file__))
 _migrate_unmatched_io = lambda x: "unmatched_design" if x else "none"
+
+
+DesignFormat(
+    "fabulous",
+    "v",
+    "FABulous tile netlist",
+    alts=["FABULOUS_NETLIST"],
+    multiple=True,
+).register()
+
+DesignFormat(
+    "fabulous",
+    "v",
+    "FABulous tile switch matrix",
+    alts=["FABULOUS_SWITCH_MATRIX"],
+    multiple=True,
+).register()
+
+DesignFormat(
+    "fabulous",
+    "v",
+    "FABulous tile config memory",
+    alts=["FABULOUS_CONFIG_MEMORY"],
+    multiple=True,
+).register()
 
 
 @Step.factory.register()
@@ -221,6 +246,11 @@ class FABulousTile(Classic):
         ("OpenROAD.STAMidPNR", None),
         ("OpenROAD.STAMidPNR", None),
         ("OpenROAD.STAPostPNR", None),
+        # Don't resize/repair any buffers
+        ("OpenROAD.Resizer*", None),
+        ("OpenROAD.RepairDesign*", None),
+        # But do add buffers if explicitly wished
+        ("+OpenROAD.GlobalPlacement", AddBuffers),
     ]
 
     config_vars = Classic.config_vars + [
@@ -306,6 +336,7 @@ class FABulousTile(Classic):
             f.write(
                 'SuperTileEnable,{"TRUE" if self.config["FABULOUS_SUPERTILE"] else "FALSE"}\n'
             )  # TRUE/FALSE
+            f.write("DisableUserCLK,TRUE\n")
 
             if self.config["FABULOUS_SUPERTILE"]:
                 for tile in supertile_tiles:
@@ -352,29 +383,32 @@ class FABulousTile(Classic):
             tile = self.fabric.getTileByName(self.config["DESIGN_NAME"])
 
             # Gen switch matrix
-            self.writer.outFileName = pathlib.Path(
-                os.path.join(
-                    self.config["FABULOUS_TILE_DIR"],
-                    f"{self.config['DESIGN_NAME']}_switch_matrix.v",
-                )
+            switch_matrix_path = os.path.join(
+                self.config["FABULOUS_TILE_DIR"],
+                f"{self.config['DESIGN_NAME']}_switch_matrix.v",
             )
+            self.writer.outFileName = pathlib.Path(switch_matrix_path)
             genTileSwitchMatrix(
                 self.writer, self.fabric, tile, switch_matrix_debug_signal=False
             )
-            verilog_files.append(
-                os.path.join(
-                    self.config["FABULOUS_TILE_DIR"],
-                    f"{self.config['DESIGN_NAME']}_switch_matrix.v",
-                )
+
+            verilog_files.append(switch_matrix_path)
+            initial_state = State(
+                copying=initial_state,
+                overrides={
+                    "FABULOUS_SWITCH_MATRIX": initial_state.get(
+                        "FABULOUS_SWITCH_MATRIX", []
+                    )
+                    + [Path(switch_matrix_path)]
+                },
             )
 
             # Gen config mem
-            self.writer.outFileName = pathlib.Path(
-                os.path.join(
-                    self.config["FABULOUS_TILE_DIR"],
-                    f"{self.config['DESIGN_NAME']}_ConfigMem.v",
-                )
+            config_mem_path = os.path.join(
+                self.config["FABULOUS_TILE_DIR"],
+                f"{self.config['DESIGN_NAME']}_ConfigMem.v",
             )
+            self.writer.outFileName = pathlib.Path(config_mem_path)
             generateConfigMem(
                 self.writer,
                 self.fabric,
@@ -394,26 +428,33 @@ class FABulousTile(Classic):
                     f"{self.config['DESIGN_NAME']}_ConfigMem.csv",
                 )
             ).exists():
-                verilog_files.append(
-                    os.path.join(
-                        self.config["FABULOUS_TILE_DIR"],
-                        f"{self.config['DESIGN_NAME']}_ConfigMem.v",
-                    )
+                verilog_files.append(config_mem_path)
+                initial_state = State(
+                    copying=initial_state,
+                    overrides={
+                        "FABULOUS_CONFIG_MEMORY": initial_state.get(
+                            "FABULOUS_CONFIG_MEMORY", []
+                        )
+                        + [Path(config_mem_path)]
+                    },
                 )
 
             # Gen tile
             info(f"Generating tile {self.config['DESIGN_NAME']}")
-            self.writer.outFileName = pathlib.Path(
-                os.path.join(
-                    self.config["FABULOUS_TILE_DIR"], f"{self.config['DESIGN_NAME']}.v"
-                )
+            tile_netlist_path = os.path.join(
+                self.config["FABULOUS_TILE_DIR"], f"{self.config['DESIGN_NAME']}.v"
             )
+            self.writer.outFileName = pathlib.Path(tile_netlist_path)
             generateTile(self.writer, self.fabric, tile)
-            verilog_files.append(
-                os.path.join(
-                    self.config["FABULOUS_TILE_DIR"], f"{self.config['DESIGN_NAME']}.v"
-                )
+            verilog_files.append(tile_netlist_path)
+            initial_state = State(
+                copying=initial_state,
+                overrides={
+                    "FABULOUS_NETLIST": initial_state.get("FABULOUS_NETLIST", [])
+                    + [Path(tile_netlist_path)]
+                },
             )
+
             info(f"Generated tile {self.config['DESIGN_NAME']}")
 
             info(tile)
@@ -572,32 +613,33 @@ class FABulousTile(Classic):
             for tile in supertile.tiles:
 
                 # Gen switch matrix
-                self.writer.outFileName = pathlib.Path(
-                    os.path.join(
-                        self.config["FABULOUS_TILE_DIR"],
-                        tile.name,
-                        f"{tile.name}_switch_matrix.v",
-                    )
+                switch_matrix_path = os.path.join(
+                    self.config["FABULOUS_TILE_DIR"],
+                    tile.name,
+                    f"{tile.name}_switch_matrix.v",
                 )
+                self.writer.outFileName = pathlib.Path(switch_matrix_path)
                 genTileSwitchMatrix(
                     self.writer, self.fabric, tile, switch_matrix_debug_signal=False
                 )
-                verilog_files.append(
-                    os.path.join(
-                        self.config["FABULOUS_TILE_DIR"],
-                        tile.name,
-                        f"{tile.name}_switch_matrix.v",
-                    )
+                verilog_files.append(switch_matrix_path)
+                initial_state = State(
+                    copying=initial_state,
+                    overrides={
+                        "FABULOUS_SWITCH_MATRIX": initial_state.get(
+                            "FABULOUS_SWITCH_MATRIX", []
+                        )
+                        + [Path(switch_matrix_path)]
+                    },
                 )
 
                 # Gen config mem
-                self.writer.outFileName = pathlib.Path(
-                    os.path.join(
-                        self.config["FABULOUS_TILE_DIR"],
-                        tile.name,
-                        f"{tile.name}_ConfigMem.v",
-                    )
+                config_mem_path = os.path.join(
+                    self.config["FABULOUS_TILE_DIR"],
+                    tile.name,
+                    f"{tile.name}_ConfigMem.v",
                 )
+                self.writer.outFileName = pathlib.Path(config_mem_path)
                 generateConfigMem(
                     self.writer,
                     self.fabric,
@@ -619,27 +661,33 @@ class FABulousTile(Classic):
                         f"{tile.name}_ConfigMem.csv",
                     )
                 ).exists():
-                    verilog_files.append(
-                        os.path.join(
-                            self.config["FABULOUS_TILE_DIR"],
-                            tile.name,
-                            f"{tile.name}_ConfigMem.v",
-                        )
+                    verilog_files.append(config_mem_path)
+                    initial_state = State(
+                        copying=initial_state,
+                        overrides={
+                            "FABULOUS_CONFIG_MEMORY": initial_state.get(
+                                "FABULOUS_CONFIG_MEMORY", []
+                            )
+                            + [Path(config_mem_path)]
+                        },
                     )
 
                 # Gen tile
                 info(f"Generating tile {tile.name}")
-                self.writer.outFileName = pathlib.Path(
-                    os.path.join(
-                        self.config["FABULOUS_TILE_DIR"], tile.name, f"{tile.name}.v"
-                    )
+                tile_netlist_path = os.path.join(
+                    self.config["FABULOUS_TILE_DIR"], tile.name, f"{tile.name}.v"
                 )
+                self.writer.outFileName = pathlib.Path(tile_netlist_path)
                 generateTile(self.writer, self.fabric, tile)
-                verilog_files.append(
-                    os.path.join(
-                        self.config["FABULOUS_TILE_DIR"], tile.name, f"{tile.name}.v"
-                    )
+                verilog_files.append(tile_netlist_path)
+                initial_state = State(
+                    copying=initial_state,
+                    overrides={
+                        "FABULOUS_NETLIST": initial_state.get("FABULOUS_NETLIST", [])
+                        + [Path(tile_netlist_path)]
+                    },
                 )
+
                 info(f"Generated tile {tile.name}")
 
                 info(tile)
@@ -651,17 +699,19 @@ class FABulousTile(Classic):
 
             # Gen super tile
             info(f"Generating tile {self.config['DESIGN_NAME']}")
-            self.writer.outFileName = pathlib.Path(
-                os.path.join(
-                    self.config["FABULOUS_TILE_DIR"], f"{self.config['DESIGN_NAME']}.v"
-                )
+            tile_netlist_path = os.path.join(
+                self.config["FABULOUS_TILE_DIR"], f"{self.config['DESIGN_NAME']}.v"
             )
+            self.writer.outFileName = pathlib.Path(tile_netlist_path)
             generateSuperTile(self.writer, self.fabric, supertile)
             info(f"Generated tile {self.config['DESIGN_NAME']}")
-            verilog_files.append(
-                os.path.join(
-                    self.config["FABULOUS_TILE_DIR"], f"{self.config['DESIGN_NAME']}.v"
-                )
+            verilog_files.append(tile_netlist_path)
+            initial_state = State(
+                copying=initial_state,
+                overrides={
+                    "FABULOUS_NETLIST": initial_state.get("FABULOUS_NETLIST", [])
+                    + [Path(tile_netlist_path)]
+                },
             )
 
             portsAround = supertile.getPortsAroundTile()

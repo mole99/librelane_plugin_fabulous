@@ -1,0 +1,32 @@
+diff --git a/fabulous/fabric_generator/gen_fabric/gen_fabric.py b/fabulous/fabric_generator/gen_fabric/gen_fabric.py
+index 87858963..c3d4a6d4 100644
+--- a/fabulous/fabric_generator/gen_fabric/gen_fabric.py
++++ b/fabulous/fabric_generator/gen_fabric/gen_fabric.py
+@@ -521,19 +521,17 @@ def generateFabric(writer: CodeGenerator, fabric: Fabric) -> None:
+             if superTile:
+                 name = superTile.name
+                 for i, j in tileLocationOffset:
+-                    if (y + j) not in (0, fabric.numberOfRows - 1):
+-                        emulateParamPairs.append(
+-                            (
+-                                f"Tile_X{i}Y{j}_Emulate_Bitstream",
+-                                f"`Tile_X{x + i}Y{y + j}_Emulate_Bitstream",
+-                            )
++                    emulateParamPairs.append(
++                        (
++                            f"Tile_X{i}Y{j}_Emulate_Bitstream",
++                            f"`Tile_X{x + i}Y{y + j}_Emulate_Bitstream",
+                         )
++                    )
+             else:
+                 name = tile.name
+-                if y not in (0, fabric.numberOfRows - 1):
+-                    emulateParamPairs.append(
+-                        ("Emulate_Bitstream", f"`Tile_X{x}Y{y}_Emulate_Bitstream")
+-                    )
++                emulateParamPairs.append(
++                    ("Emulate_Bitstream", f"`Tile_X{x}Y{y}_Emulate_Bitstream")
++                )
+ 
+             writer.addInstantiation(
+                 compName=name,

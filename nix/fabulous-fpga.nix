@@ -16,9 +16,12 @@
   FABulous-bit-gen,
   pyyaml,
   click,
-  version ? "v2.0.0b4",
-  rev ? null,
-  sha256 ? "sha256-u5yjombMBFUo/CQZQyXzFiZzzbTqbsnG7dVYFpExU44=",
+  numpy,
+  pymoo,
+  pick,
+  version ? "2.0.0",
+  rev ? "f7fd0c944716bc79e9cb2a7a1f73e0d6dd4dedae",
+  sha256 ? "sha256-wPS1GOq4mF5aGFbD1n1hYY0t651uY0jevAnhhUsun6E=",
 }:
 let
 
@@ -43,6 +46,7 @@ let
       ./patches/fabulous/fix_supertile_framedata_o.patch
       ./patches/fabulous/ignore_destination.patch
       ./patches/fabulous/keep_tiles.patch
+      ./patches/fabulous/emulation_rows.patch
     ];
 
     dependencies = [
@@ -59,16 +63,17 @@ let
       FABulous-bit-gen
       pyyaml
       click
+      numpy
+      pymoo
+      pick
     ];
 
     # Remove the executables as they make problems with Nix?
     postPatch = ''
       substituteInPlace pyproject.toml \
-        --replace "FABulous = \"FABulous.FABulous:main\"" ""
+        --replace "FABulous = \"fabulous.fabulous:main\"" ""
       substituteInPlace pyproject.toml \
-        --replace "fabulous = \"FABulous.FABulous:main\"" ""
-      substituteInPlace pyproject.toml \
-        --replace "bit_gen = \"FABulous.fabric_cad.bit_gen:bit_gen\"" ""
+        --replace "fabulous = \"fabulous.fabulous:main\"" ""
 
       substituteInPlace pyproject.toml \
         --replace "pydantic>=2.12.1" "pydantic>=2.11.1"
@@ -79,9 +84,11 @@ let
       substituteInPlace pyproject.toml \
         --replace "packaging>=25.0" "packaging>=24.2"
       substituteInPlace pyproject.toml \
-        --replace "typer>=0.16.1" "typer>=0.15.2"
-      substituteInPlace pyproject.toml \
         --replace "\"librelane>=3.0.0.dev43\"," ""
+      substituteInPlace pyproject.toml \
+        --replace "numpy>=2.3.5" "numpy>=2.3.4"
+      substituteInPlace pyproject.toml \
+        --replace "\"ciel>=2.4.0\"," ""
     '';
 
   };
