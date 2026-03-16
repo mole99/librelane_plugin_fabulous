@@ -20,8 +20,8 @@
   pymoo,
   pick,
   version ? "2.0.0",
-  rev ? "f7fd0c944716bc79e9cb2a7a1f73e0d6dd4dedae",
-  sha256 ? "sha256-wPS1GOq4mF5aGFbD1n1hYY0t651uY0jevAnhhUsun6E=",
+  rev ? "856654f96d7ba97effd42651ba148c43f9752b23",
+  sha256 ? "sha256-DwZERuxaCGPeoXjciZ5lq/+YxzCV/zGSjchRUJzwcdI=",
 }:
 let
 

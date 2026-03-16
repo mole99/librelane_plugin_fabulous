@@ -266,7 +266,7 @@ class FABulousFabric(Classic):
         self.fabric = parse_csv.parseFabricCSV(
             pathlib.Path(self.config["FABULOUS_FABRIC_CONFIG"])
         )
-        self.fabric.name = "eFPGA"  # TODO name change does not change module name
+        self.fabric.name = self.config["DESIGN_NAME"]
 
         tileByFabric = list(self.fabric.tileDic.keys())
         superTileByFabric = list(self.fabric.superTileDic.keys())
