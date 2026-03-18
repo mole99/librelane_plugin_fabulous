@@ -22,8 +22,8 @@
   pick,
   sdf-timing,
   version ? "2.0.0",
-  rev ? "51f7c4e48b7a41370b50b593c88c21c0baf908fe",
-  sha256 ? "sha256-SEvc/pdwNrDL4WolWW8Q+nZi1tnFfLHYIRoVLcdsa6g=",
+  rev ? "03122950d5f80850ae8bb1725b41610b6899fddf",
+  sha256 ? "sha256-uix7OqvejwJnLTvScSyVXvGyt2FbqnyXWduXlqgzzts=",
 }:
 let
 
@@ -95,6 +95,8 @@ let
         --replace "networkx>=3.6.1" "networkx>=3.5.0"
       substituteInPlace pyproject.toml \
         --replace "\"ciel>=2.4.0\"," ""
+      substituteInPlace pyproject.toml \
+        --replace "\"go-task-bin>=3.40.0\"," ""
     '';
 
   };
