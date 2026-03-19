@@ -214,7 +214,7 @@ class FABulousFabric(Classic):
         Variable(
             "FABULOUS_FABRIC_CONFIG",
             Path,
-            "The fabric configuration file.",
+            "The fabric configuration CSV file. It includes the tile map of the fabric, the parameters, and paths to the tiles.",
         ),
         Variable(
             "FABULOUS_TILE_LIBRARY",
@@ -223,8 +223,9 @@ class FABulousFabric(Classic):
         ),
         Variable(
             "FABULOUS_TILE_SPACING",
-            Decimal,
+            Optional[Decimal],
             "The spacing between tiles.",
+            default=0,
         ),
         Variable(
             "FABULOUS_HALO_SPACING",

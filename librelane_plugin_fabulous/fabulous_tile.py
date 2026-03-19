@@ -273,7 +273,7 @@ class FABulousTile(Classic):
             "FABULOUS_TILE_DIR",
             Path,
             """
-            Path to the tile directory where the CSV file is located.
+            Path to the tile directory where the tile CSV file is located.
             """,
         ),
     ]
@@ -502,7 +502,6 @@ class FABulousTile(Classic):
                 else:
                     north_ports.append(port.name)
 
-            north_ports.append("UserCLKo")
             north_ports.append("FrameStrobe_O\\[.*\\]")
 
             # EAST ports
@@ -565,7 +564,6 @@ class FABulousTile(Classic):
                 else:
                     south_ports.append(port.name)
 
-            south_ports.append("UserCLK")
             south_ports.append("FrameStrobe\\[.*\\]")
 
             # WEST ports
@@ -809,11 +807,9 @@ class FABulousTile(Classic):
 
                         # Now add configuration ports + clock
                         if side == Side.NORTH:
-                            ports.append(prefix + "UserCLKo")
                             ports.append(prefix + "FrameStrobe_O\\[.*\\]")
 
                         if side == Side.SOUTH:
-                            ports.append(prefix + "UserCLK")
                             ports.append(prefix + "FrameStrobe\\[.*\\]")
 
                         if side == Side.EAST:
@@ -869,7 +865,6 @@ class FABulousTile(Classic):
                 for port in port_side:
                     f.write(f"{port}\n")
 
-            # f.write('Tile_X0Y0_UserCLKo\n')
             # f.write('Tile_X0Y0_FrameStrobe_O\\[.*\\]\n')
 
             f.write(f"\n#E\n\n")
@@ -887,7 +882,6 @@ class FABulousTile(Classic):
                 for port in port_side:
                     f.write(f"{port}\n")
 
-            # f.write('Tile_X0Y1_UserCLK\n')
             # f.write('Tile_X0Y1_FrameStrobe\\[.*\\]\n')
 
             f.write(f"\n#W\n\n")
