@@ -9,7 +9,7 @@
   };
 
   inputs = {
-    librelane.url = "github:librelane/librelane/dev";
+    librelane.url = "github:librelane/librelane/3.0.0";
   };
 
   outputs =
@@ -39,13 +39,6 @@
               librelane-plugin-fabulous = callPythonPackage ./default.nix { };
             }
           ))
-          (new: old: {
-            fabulous-fpga = old.fabulous-fpga.overrideAttrs (
-              finalAttrs: previousAttrs: {
-                patches = previousAttrs.patches ++ [ ./patches/fabulous/fix_supertile_framedata_o.patch ];
-              }
-            );
-          })
         ];
       };
       # Outputs
