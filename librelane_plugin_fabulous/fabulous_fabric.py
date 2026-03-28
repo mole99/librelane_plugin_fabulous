@@ -770,29 +770,47 @@ class FABulousFabric(Classic):
 
                 custom_per_tile_source_files[macro_name]["rtl_files"].append(tile_rtl)
 
-                switch_matrix_rtl = os.path.join(
-                    self.config["FABULOUS_TILE_LIBRARY"],
-                    macro_name,
-                    f"{macro_name}_switch_matrix.v",
-                )
-                if os.path.isfile(switch_matrix_rtl):
-                    custom_per_tile_source_files[macro_name]["rtl_files"].append(
-                        switch_matrix_rtl
+                if macro_name in supertiles:
+                    subtile_rtls = glob.glob(
+                        os.path.join(
+                            self.config["FABULOUS_TILE_LIBRARY"],
+                            macro_name,
+                            f"{macro_name}_*",
+                            f"{macro_name}_*.v",
+                        )
                     )
 
-                config_mem_rtl = os.path.join(
-                    self.config["FABULOUS_TILE_LIBRARY"],
-                    macro_name,
-                    f"{macro_name}_ConfigMem.v",
-                )
-                if os.path.isfile(config_mem_rtl):
-                    custom_per_tile_source_files[macro_name]["rtl_files"].append(
-                        config_mem_rtl
+                    for subtile_rtl in subtile_rtls:
+                        custom_per_tile_source_files[macro_name]["rtl_files"].append(
+                            subtile_rtl
+                        )
+
+                else:
+                    switch_matrix_rtl = os.path.join(
+                        self.config["FABULOUS_TILE_LIBRARY"],
+                        macro_name,
+                        f"{macro_name}_switch_matrix.v",
                     )
+                    if os.path.isfile(switch_matrix_rtl):
+                        custom_per_tile_source_files[macro_name]["rtl_files"].append(
+                            switch_matrix_rtl
+                        )
+
+                    config_mem_rtl = os.path.join(
+                        self.config["FABULOUS_TILE_LIBRARY"],
+                        macro_name,
+                        f"{macro_name}_ConfigMem.v",
+                    )
+                    if os.path.isfile(config_mem_rtl):
+                        custom_per_tile_source_files[macro_name]["rtl_files"].append(
+                            config_mem_rtl
+                        )
 
                 custom_per_tile_source_files[macro_name]["rtl_files"].extend(
                     primitives_rtl
                 )
+
+            print(f"custom_per_tile_source_files: {custom_per_tile_source_files}")
 
             mode = TimingModelMode[
                 self.config["FABULOUS_TIMING_MODEL"]
