@@ -470,7 +470,7 @@ def io_place(
                     * segments_n
                     / len(pin_placement["E"])
                     // h_step
-                    * h_step  # TODO: maybe add one hstep here
+                    * h_step
                 ),
                 count // len(pin_placement["E"]),
                 h_step,
@@ -494,7 +494,7 @@ def io_place(
                     * segments_n
                     / len(pin_placement["W"])
                     // h_step
-                    * h_step  # TODO: maybe add one hstep here
+                    * h_step
                 ),
                 count // len(pin_placement["W"]),
                 h_step,
@@ -522,8 +522,8 @@ def io_place(
                     (DIE_AREA.xMax() - DIE_AREA.xMin())
                     * segments_n
                     / len(pin_placement["N"])
-                    // h_step
-                    * h_step  # TODO: maybe add one hstep here
+                    // v_step
+                    * v_step
                 ),
                 count // len(pin_placement["N"]),
                 v_step,
@@ -546,8 +546,8 @@ def io_place(
                     (DIE_AREA.xMax() - DIE_AREA.xMin())
                     * segments_n
                     / len(pin_placement["S"])
-                    // h_step
-                    * h_step  # TODO: maybe add one hstep here
+                    // v_step
+                    * v_step
                 ),
                 count // len(pin_placement["S"]),
                 v_step,
