@@ -12,21 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 source $::env(SCRIPTS_DIR)/openroad/common/io.tcl
-source $::env(SCRIPTS_DIR)/openroad/common/resizer.tcl
 
 read_current_odb
-
-unset_propagated_clock [all_clocks]
-
-set_dont_touch_objects
-
-# set rc values
-source $::env(SCRIPTS_DIR)/openroad/common/set_rc.tcl
-
-# CTS and detailed placement move instances, so update parastic estimates.
-# estimate wire rc parasitics
-estimate_parasitics -placement
-
 
 # Buffer I/O
 if { $::env(DESIGN_REPAIR_REMOVE_BUFFERS) } {
@@ -43,14 +30,4 @@ if { $::env(DESIGN_REPAIR_BUFFER_OUTPUT_PORTS) } {
 
 report_floating_nets -verbose
 
-# Legalize
-source $::env(SCRIPTS_DIR)/openroad/common/dpl.tcl
-
-unset_dont_touch_objects
-
-source $::env(SCRIPTS_DIR)/openroad/common/set_rc.tcl
-estimate_parasitics -placement
-
-
 write_views
-

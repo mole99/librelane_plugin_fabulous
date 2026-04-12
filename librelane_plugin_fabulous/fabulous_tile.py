@@ -250,7 +250,7 @@ class FABulousTile(Classic):
         ("OpenROAD.Resizer*", None),
         ("OpenROAD.RepairDesign*", None),
         # But do add buffers if explicitly wished
-        ("+OpenROAD.GlobalPlacement", AddBuffers),
+        ("+Odb.ApplyDEFTemplate", AddBuffers),
     ]
 
     config_vars = Classic.config_vars + [
