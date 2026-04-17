@@ -218,7 +218,7 @@ class FABulousFabric(Classic):
         ),
         Variable(
             "FABULOUS_TILE_LIBRARY",
-            Path,
+            Path | List[Path],
             "The path to the tile library.",
         ),
         Variable(
@@ -254,7 +254,12 @@ class FABulousFabric(Classic):
         info(f'FABULOUS_TILE_LIBRARY: {self.config["FABULOUS_TILE_LIBRARY"]}')
 
         assert os.path.isfile(self.config["FABULOUS_FABRIC_CONFIG"])
-        assert os.path.isdir(self.config["FABULOUS_TILE_LIBRARY"])
+
+        if type(self.config["FABULOUS_TILE_LIBRARY"]) is Path:
+            assert os.path.isdir(self.config["FABULOUS_TILE_LIBRARY"])
+        else:
+            for tile_library_path in self.config["FABULOUS_TILE_LIBRARY"]:
+                assert os.path.isdir(tile_library_path)
 
         verilog_files = self.config["VERILOG_FILES"]
 
@@ -388,11 +393,20 @@ class FABulousFabric(Classic):
 
         info(f"supertiles: {supertiles}")
 
+        def get_tile_library(tile_libraries, tile):
+            for tile_library in tile_libraries:
+                if (pathlib.Path(tile_library) / tile).is_dir():
+                    return tile_library
+            assert 0, "Could not find tile in tile libraries!"
+
         if flat:
             # Find tile sources
             for tile in tiles:
                 info(f"Appending sources for {tile}")
-                tile_path = pathlib.Path(self.config["FABULOUS_TILE_LIBRARY"]) / tile
+                tile_library = get_tile_library(
+                    self.config["FABULOUS_TILE_LIBRARY"], tile
+                )
+                tile_path = pathlib.Path(tile_library) / tile
 
                 if tile_path.is_dir():
                     tile_sources = tile_path.glob("*.v")
@@ -427,10 +441,14 @@ class FABulousFabric(Classic):
                 if macro_name == None:
                     continue
 
+                tile_library = get_tile_library(
+                    self.config["FABULOUS_TILE_LIBRARY"], macro_name
+                )
+
                 macros[macro_name] = {
                     "gds": [
                         os.path.join(
-                            self.config["FABULOUS_TILE_LIBRARY"],
+                            tile_library,
                             macro_name,
                             "macro",
                             self.config["PDK"],
@@ -440,7 +458,7 @@ class FABulousFabric(Classic):
                     ],
                     "lef": [
                         os.path.join(
-                            self.config["FABULOUS_TILE_LIBRARY"],
+                            tile_library,
                             macro_name,
                             "macro",
                             self.config["PDK"],
@@ -450,7 +468,7 @@ class FABulousFabric(Classic):
                     ],
                     "nl": [
                         os.path.join(
-                            self.config["FABULOUS_TILE_LIBRARY"],
+                            tile_library,
                             macro_name,
                             "macro",
                             self.config["PDK"],
@@ -465,7 +483,7 @@ class FABulousFabric(Classic):
                 for corner in self.config["FABULOUS_SPEF_CORNERS"]:
                     macros[macro_name]["spef"][f"{corner}_*"] = [
                         os.path.join(
-                            self.config["FABULOUS_TILE_LIBRARY"],
+                            tile_library,
                             macro_name,
                             "macro",
                             self.config["PDK"],
