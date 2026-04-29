@@ -4,10 +4,10 @@
   setuptools,
   setuptools-scm,
   loguru,
-  fasm,
-  version ? "v0.1.0",
+  fabulous-fasm,
+  version ? "v0.2.0",
   rev ? null,
-  sha256 ? "sha256-nrRcqoWIPXcE/jnqq64zw6aCyFkumeF78YiaZ0JyaU0=",
+  sha256 ? "sha256-bKzDLMA6T/ga6rHaYgssrwXHCDfcejKO8HVRNkny7Bg=",
 }:
 let
 
@@ -30,7 +30,7 @@ let
 
     dependencies = [
       loguru
-      fasm
+      fabulous-fasm
     ];
 
   };

@@ -2,10 +2,11 @@
   fetchFromGitHub,
   buildPythonPackage,
   setuptools,
+  setuptools-scm,
   textx,
-  version ? "v0.0.2",
+  version ? "v0.2.0",
   rev ? null,
-  sha256 ? "sha256-AMG4+qMk2+40GllhE8UShagN/jxSVN+RNtJCW3vFLBU=",
+  sha256 ? "sha256-BOCM5ZbJoOEG2g2D1jsB3hNevjCvcg56IUQsZ9pvIvQ=",
 }:
 let
 
@@ -15,14 +16,15 @@ let
     inherit version;
 
     src = fetchFromGitHub {
-      owner = "chipsalliance";
-      repo = "fasm";
+      owner = "FPGA-Research";
+      repo = "FABulous-fasm";
       rev = if rev == null then version else rev;
       inherit sha256;
     };
 
     build-system = [
       setuptools
+      setuptools-scm
     ];
 
     dependencies = [

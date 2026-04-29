@@ -274,10 +274,12 @@ class FABulousFabric(Classic):
         assert os.path.isfile(self.config["FABULOUS_FABRIC_CONFIG"])
 
         if type(self.config["FABULOUS_TILE_LIBRARY"]) is Path:
-            assert os.path.isdir(self.config["FABULOUS_TILE_LIBRARY"])
-        else:
-            for tile_library_path in self.config["FABULOUS_TILE_LIBRARY"]:
-                assert os.path.isdir(tile_library_path)
+            self.config = self.config.copy(
+                FABULOUS_TILE_LIBRARY=[self.config["FABULOUS_TILE_LIBRARY"]]
+            )
+
+        for tile_library_path in self.config["FABULOUS_TILE_LIBRARY"]:
+            assert os.path.isdir(tile_library_path)
 
         verilog_files = self.config["VERILOG_FILES"]
 
@@ -418,7 +420,7 @@ class FABulousFabric(Classic):
             for tile_library in tile_libraries:
                 if (pathlib.Path(tile_library) / tile).is_dir():
                     return tile_library
-            assert 0, "Could not find tile in tile libraries!"
+            assert 0, f"Could not find {tile} in any of the tile libraries!"
 
         if flat:
             # Find tile sources
@@ -717,19 +719,23 @@ class FABulousFabric(Classic):
         if self.config["SYNTH_TRISTATE_MAP"]:
             techmap_files.append(str(self.config["SYNTH_TRISTATE_MAP"]))
 
-        # Copy the primitives
         primitives_rtl = [
-            os.path.join(self.config["FABULOUS_TILE_LIBRARY"], "../../models_pack.v"),
-            os.path.join(self.config["FABULOUS_TILE_LIBRARY"], "../../custom.v"),
+            os.path.join(
+                self.config["FABULOUS_TILE_LIBRARY"][0], "../../models_pack.v"
+            ),
+            os.path.join(self.config["FABULOUS_TILE_LIBRARY"][0], "../../custom.v"),
         ]
-        primitives_rtl.extend(
-            glob.glob(
-                os.path.join(
-                    self.config["FABULOUS_TILE_LIBRARY"],
-                    "../../primitives/*/fabulous/*.v",
+
+        # Copy the primitives from the tile libraries
+        for tile_library in self.config["FABULOUS_TILE_LIBRARY"]:
+            primitives_rtl.extend(
+                glob.glob(
+                    os.path.join(
+                        tile_library,
+                        "../../primitives/*/fabulous/*.v",
+                    )
                 )
             )
-        )
 
         for corner, liberty_files in self.config["LIB"].items():
             print(f"Generating the timing model for: {corner}")
@@ -742,6 +748,10 @@ class FABulousFabric(Classic):
             for macro_name, config in macros.items():
                 custom_per_tile_source_files[macro_name] = {}
 
+                tile_library = get_tile_library(
+                    self.config["FABULOUS_TILE_LIBRARY"], macro_name
+                )
+
                 # Add the NL
                 custom_per_tile_source_files[macro_name]["netlist_file"] = config["nl"][
                     0
@@ -749,7 +759,7 @@ class FABulousFabric(Classic):
 
                 # Add the SPEF
                 tile_spef_origin = os.path.join(
-                    self.config["FABULOUS_TILE_LIBRARY"],
+                    tile_library,
                     macro_name,
                     "macro",
                     self.config["PDK"],
@@ -763,7 +773,7 @@ class FABulousFabric(Classic):
                 # Add the RTL
                 custom_per_tile_source_files[macro_name]["rtl_files"] = []
                 tile_rtl = os.path.join(
-                    self.config["FABULOUS_TILE_LIBRARY"],
+                    tile_library,
                     macro_name,
                     f"{macro_name}.v",
                 )
@@ -773,7 +783,7 @@ class FABulousFabric(Classic):
                 if macro_name in supertiles:
                     subtile_rtls = glob.glob(
                         os.path.join(
-                            self.config["FABULOUS_TILE_LIBRARY"],
+                            tile_library,
                             macro_name,
                             f"{macro_name}_*",
                             f"{macro_name}_*.v",
@@ -787,7 +797,7 @@ class FABulousFabric(Classic):
 
                 else:
                     switch_matrix_rtl = os.path.join(
-                        self.config["FABULOUS_TILE_LIBRARY"],
+                        tile_library,
                         macro_name,
                         f"{macro_name}_switch_matrix.v",
                     )
@@ -797,7 +807,7 @@ class FABulousFabric(Classic):
                         )
 
                     config_mem_rtl = os.path.join(
-                        self.config["FABULOUS_TILE_LIBRARY"],
+                        tile_library,
                         macro_name,
                         f"{macro_name}_ConfigMem.v",
                     )

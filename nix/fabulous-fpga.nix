@@ -22,8 +22,8 @@
   pick,
   sdf-timing,
   version ? "2.0.0",
-  rev ? "03122950d5f80850ae8bb1725b41610b6899fddf",
-  sha256 ? "sha256-uix7OqvejwJnLTvScSyVXvGyt2FbqnyXWduXlqgzzts=",
+  rev ? "09dba9799b5a4a2f6845ee2e0895ab0c97dd6306",
+  sha256 ? "sha256-bmM9jSxmLneZYJ07z6oF8jMd1LkWXr8jlF9jHqTMqe8=",
 }:
 let
 
@@ -33,7 +33,7 @@ let
     inherit version;
 
     src = fetchFromGitHub {
-      owner = "hausdinge";
+      owner = "FPGA-Research";
       repo = "FABulous";
       rev = if rev == null then version else rev;
       inherit sha256;
@@ -88,7 +88,7 @@ let
       substituteInPlace pyproject.toml \
         --replace "packaging>=25.0" "packaging>=24.2"
       substituteInPlace pyproject.toml \
-        --replace "\"librelane>=3.0.0.dev43\"," ""
+        --replace "\"librelane>=3.0.0\"," ""
       substituteInPlace pyproject.toml \
         --replace "numpy>=2.3.5" "numpy>=2.3.4"
       substituteInPlace pyproject.toml \
