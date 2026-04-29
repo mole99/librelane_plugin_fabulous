@@ -1,5 +1,6 @@
 import os
 import csv
+import glob
 import shutil
 import pickle
 import fnmatch
@@ -38,6 +39,8 @@ from librelane.steps import (
     Misc,
 )
 from librelane.steps.common_variables import pdn_variables
+from librelane.common.misc import mkdirp
+
 import fabulous.fabric_cad.gen_npnr_model as model_gen_npnr
 from fabulous.fabric_generator.code_generator.code_generator_Verilog import (
     VerilogCodeGenerator,
@@ -46,6 +49,15 @@ from fabulous.fabric_generator.parser import parse_csv
 from fabulous.fabric_generator.gen_fabric.gen_fabric import generateFabric
 from fabulous.geometry_generator.geometry_gen import GeometryGenerator
 from fabulous.fabric_cad.gen_bitstream_spec import generateBitstreamSpec
+from fabulous.fabric_cad.timing_model.models import (
+    TimingModelConfig,
+    TimingModelMode,
+    TimingModelSynthTools,
+    TimingModelStaTools,
+)
+from fabulous.fabric_cad.timing_model.FABulous_timing_model_interface import (
+    FABulousTimingModelInterface,
+)
 from fabulous.fabulous_settings import init_context
 
 __dir__ = os.path.dirname(os.path.abspath(__file__))
@@ -143,6 +155,7 @@ DesignFormat(
     "txt",
     "FABulous Programmagle Interconnect Points",
     alts=["FABULOUS_PIPS"],
+    multiple=True,
 ).register()
 
 DesignFormat(
@@ -240,6 +253,11 @@ class FABulousFabric(Classic):
             "The SPEF corners to use for the tile macros.",
             default=["nom"],
         ),
+        Variable(
+            "FABULOUS_TIMING_MODEL",
+            Optional[Literal["PHYSICAL", "STRUCTURAL"]],
+            "The timing model mode for timing data.",
+        ),
     ]
 
     def run(
@@ -256,10 +274,12 @@ class FABulousFabric(Classic):
         assert os.path.isfile(self.config["FABULOUS_FABRIC_CONFIG"])
 
         if type(self.config["FABULOUS_TILE_LIBRARY"]) is Path:
-            assert os.path.isdir(self.config["FABULOUS_TILE_LIBRARY"])
-        else:
-            for tile_library_path in self.config["FABULOUS_TILE_LIBRARY"]:
-                assert os.path.isdir(tile_library_path)
+            self.config = self.config.copy(
+                FABULOUS_TILE_LIBRARY=[self.config["FABULOUS_TILE_LIBRARY"]]
+            )
+
+        for tile_library_path in self.config["FABULOUS_TILE_LIBRARY"]:
+            assert os.path.isdir(tile_library_path)
 
         verilog_files = self.config["VERILOG_FILES"]
 
@@ -349,7 +369,10 @@ class FABulousFabric(Classic):
 
         initial_state = State(
             copying=initial_state,
-            overrides={"FABULOUS_PIPS": Path(os.path.join(self.run_dir, f"pips.txt"))},
+            overrides={
+                "FABULOUS_PIPS": initial_state.get("FABULOUS_PIPS", [])
+                + [Path(os.path.join(self.run_dir, f"pips.txt"))]
+            },
         )
 
         initial_state = State(
@@ -397,7 +420,7 @@ class FABulousFabric(Classic):
             for tile_library in tile_libraries:
                 if (pathlib.Path(tile_library) / tile).is_dir():
                     return tile_library
-            assert 0, "Could not find tile in tile libraries!"
+            assert 0, f"Could not find {tile} in any of the tile libraries!"
 
         if flat:
             # Find tile sources
@@ -670,5 +693,181 @@ class FABulousFabric(Classic):
         print(f"Final config: {self.config}")
 
         (final_state, steps) = super().run(initial_state, **kwargs)
+
+        # Exit early
+        if self.config["FABULOUS_TIMING_MODEL"] is None:
+            return (final_state, steps)
+
+        print(f"Fabric done! Generating timing model...")
+
+        print(f"{self.config['PDK']}")
+        print(f"{self.config['PDK_ROOT']}")
+
+        pdk = self.config["PDK"]
+        pdk_root = Path(os.path.join(self.config["PDK_ROOT"], self.config["PDK"]))
+
+        min_buf_cell_and_ports = self.config["SYNTH_BUFFER_CELL"].replace("/", " ")
+
+        techmap_files = []
+
+        if self.config["SYNTH_LATCH_MAP"]:
+            techmap_files.append(str(self.config["SYNTH_LATCH_MAP"]))
+        # if self.config['SYNTH_MUX4_MAP']:
+        #    techmap_files.append(str(self.config['SYNTH_MUX4_MAP']))
+        # if self.config['SYNTH_MUX_MAP']:
+        #    techmap_files.append(str(self.config['SYNTH_MUX_MAP']))
+        if self.config["SYNTH_TRISTATE_MAP"]:
+            techmap_files.append(str(self.config["SYNTH_TRISTATE_MAP"]))
+
+        primitives_rtl = [
+            os.path.join(
+                self.config["FABULOUS_TILE_LIBRARY"][0], "../../models_pack.v"
+            ),
+            os.path.join(self.config["FABULOUS_TILE_LIBRARY"][0], "../../custom.v"),
+        ]
+
+        # Copy the primitives from the tile libraries
+        for tile_library in self.config["FABULOUS_TILE_LIBRARY"]:
+            primitives_rtl.extend(
+                glob.glob(
+                    os.path.join(
+                        tile_library,
+                        "../../primitives/*/fabulous/*.v",
+                    )
+                )
+            )
+
+        for corner, liberty_files in self.config["LIB"].items():
+            print(f"Generating the timing model for: {corner}")
+
+            interconnect_corner = corner.split("_")[0]
+
+            custom_per_tile_source_files = {}
+
+            # Copy over the nl netlists
+            for macro_name, config in macros.items():
+                custom_per_tile_source_files[macro_name] = {}
+
+                tile_library = get_tile_library(
+                    self.config["FABULOUS_TILE_LIBRARY"], macro_name
+                )
+
+                # Add the NL
+                custom_per_tile_source_files[macro_name]["netlist_file"] = config["nl"][
+                    0
+                ]
+
+                # Add the SPEF
+                tile_spef_origin = os.path.join(
+                    tile_library,
+                    macro_name,
+                    "macro",
+                    self.config["PDK"],
+                    "spef",
+                    interconnect_corner,
+                    f"{macro_name}.{interconnect_corner}.spef",
+                )
+
+                custom_per_tile_source_files[macro_name]["rc_file"] = tile_spef_origin
+
+                # Add the RTL
+                custom_per_tile_source_files[macro_name]["rtl_files"] = []
+                tile_rtl = os.path.join(
+                    tile_library,
+                    macro_name,
+                    f"{macro_name}.v",
+                )
+
+                custom_per_tile_source_files[macro_name]["rtl_files"].append(tile_rtl)
+
+                if macro_name in supertiles:
+                    subtile_rtls = glob.glob(
+                        os.path.join(
+                            tile_library,
+                            macro_name,
+                            f"{macro_name}_*",
+                            f"{macro_name}_*.v",
+                        )
+                    )
+
+                    for subtile_rtl in subtile_rtls:
+                        custom_per_tile_source_files[macro_name]["rtl_files"].append(
+                            subtile_rtl
+                        )
+
+                else:
+                    switch_matrix_rtl = os.path.join(
+                        tile_library,
+                        macro_name,
+                        f"{macro_name}_switch_matrix.v",
+                    )
+                    if os.path.isfile(switch_matrix_rtl):
+                        custom_per_tile_source_files[macro_name]["rtl_files"].append(
+                            switch_matrix_rtl
+                        )
+
+                    config_mem_rtl = os.path.join(
+                        tile_library,
+                        macro_name,
+                        f"{macro_name}_ConfigMem.v",
+                    )
+                    if os.path.isfile(config_mem_rtl):
+                        custom_per_tile_source_files[macro_name]["rtl_files"].append(
+                            config_mem_rtl
+                        )
+
+                custom_per_tile_source_files[macro_name]["rtl_files"].extend(
+                    primitives_rtl
+                )
+
+            print(f"custom_per_tile_source_files: {custom_per_tile_source_files}")
+
+            mode = TimingModelMode[
+                self.config["FABULOUS_TIMING_MODEL"]
+            ]  # STRUCTURAL or PHYSICAL
+            debug = True
+            synth_executable = "yosys"
+            sta_executable = "sta"
+
+            iconfig = TimingModelConfig(
+                project_dir=self.run_dir,
+                liberty_files=[str(p) for p in liberty_files],
+                techmap_files=techmap_files,
+                min_buf_cell_and_ports=min_buf_cell_and_ports,
+                synth_executable=synth_executable,
+                synth_program=TimingModelSynthTools.YOSYS,
+                sta_executable=sta_executable,
+                sta_program=TimingModelStaTools.OPENSTA,
+                mode=TimingModelMode(mode),
+                debug=debug,
+                custom_per_tile_source_files=custom_per_tile_source_files,
+            )
+
+            ftmi = FABulousTimingModelInterface(config=iconfig, fabric=self.fabric)
+
+            model_gen_npnr.writeNextpnrPipFile(
+                fabric=self.fabric,
+                outputFile=Path(os.path.join(self.run_dir, f"pips.{corner}.txt")),
+                delay_model=ftmi,
+            )
+
+            # Unfortunately, this is already too late...
+            final_state = State(
+                copying=final_state,
+                overrides={
+                    "FABULOUS_PIPS": final_state.get("FABULOUS_PIPS", [])
+                    + [Path(os.path.join(self.run_dir, f"pips.{corner}.txt"))]
+                },
+            )
+
+            # We need to copy the pip file manually
+            shutil.copyfile(
+                Path(os.path.join(self.run_dir, f"pips.{corner}.txt")),
+                Path(
+                    os.path.join(
+                        self.run_dir, f"final/fabulous/.FABulous/pips.{corner}.txt"
+                    )
+                ),
+            )
 
         return (final_state, steps)

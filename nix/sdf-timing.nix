@@ -3,35 +3,44 @@
   buildPythonPackage,
   setuptools,
   setuptools-scm,
-  loguru,
-  fabulous-fasm,
-  version ? "v0.2.0",
+  pytest,
+  tox,
+  ply,
+  version ? "1.0.0",
   rev ? null,
-  sha256 ? "sha256-bKzDLMA6T/ga6rHaYgssrwXHCDfcejKO8HVRNkny7Bg=",
+  sha256 ? "sha256-GKnydzDdS75N2MF2eYzG7KuSzfOCkjipMAaL1TVVJX8=",
 }:
 let
 
   self = buildPythonPackage {
-    pname = "FABulous-bit-gen";
+    pname = "sdf-timing";
     format = "pyproject";
     inherit version;
 
     src = fetchFromGitHub {
       owner = "FPGA-Research";
-      repo = "FABulous-bit-gen";
+      repo = "f4pga-sdf-timing";
       rev = if rev == null then version else rev;
       inherit sha256;
     };
 
     build-system = [
       setuptools
-      setuptools-scm
     ];
 
     dependencies = [
-      loguru
-      fabulous-fasm
+      setuptools-scm
+      pytest
+      tox
+      ply
     ];
+
+    postPatch = ''
+      substituteInPlace requirements.txt \
+        --replace "yapf==0.24.0" ""
+      substituteInPlace setup.py \
+        --replace "'pyjson'," ""
+    '';
 
   };
 in
