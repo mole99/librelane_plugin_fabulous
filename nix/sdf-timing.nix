@@ -7,7 +7,7 @@
   tox,
   ply,
   version ? "1.0.0",
-  rev ? null,
+  rev ? "fb83228866b4d635dcdb126502aeb9da707413a0",
   sha256 ? "sha256-GKnydzDdS75N2MF2eYzG7KuSzfOCkjipMAaL1TVVJX8=",
 }:
 let
