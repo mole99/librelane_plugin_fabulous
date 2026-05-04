@@ -737,10 +737,23 @@ class FABulousFabric(Classic):
                 )
             )
 
-        for corner, liberty_files in self.config["LIB"].items():
-            print(f"Generating the timing model for: {corner}")
+        for corner in self.config["STA_CORNERS"]:
+            info(f"Generating the timing model for: {corner}")
 
             interconnect_corner = corner.split("_")[0]
+
+            selected_liberty_files = None
+
+            # Find the liberty files for the corner
+            for corner_pattern, liberty_files in self.config["LIB"].items():
+                if fnmatch.fnmatch(corner, corner_pattern):
+                    info(f"Matched {corner_pattern} with {corner} corner.")
+                    selected_liberty_files = liberty_files
+
+            if selected_liberty_files == None:
+                raise FlowError(
+                    f"Error: Could not find liberty files for {corner} corner!"
+                )
 
             custom_per_tile_source_files = {}
 
@@ -820,7 +833,7 @@ class FABulousFabric(Classic):
                     primitives_rtl
                 )
 
-            print(f"custom_per_tile_source_files: {custom_per_tile_source_files}")
+            info(f"custom_per_tile_source_files: {custom_per_tile_source_files}")
 
             mode = TimingModelMode[
                 self.config["FABULOUS_TIMING_MODEL"]
@@ -831,7 +844,7 @@ class FABulousFabric(Classic):
 
             iconfig = TimingModelConfig(
                 project_dir=self.run_dir,
-                liberty_files=[str(p) for p in liberty_files],
+                liberty_files=[str(p) for p in selected_liberty_files],
                 techmap_files=techmap_files,
                 min_buf_cell_and_ports=min_buf_cell_and_ports,
                 synth_executable=synth_executable,
