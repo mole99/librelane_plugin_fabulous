@@ -21,11 +21,11 @@ if { $::env(DESIGN_REPAIR_REMOVE_BUFFERS) } {
 }
 
 if { $::env(DESIGN_REPAIR_BUFFER_INPUT_PORTS) } {
-    buffer_ports -inputs
+    buffer_ports -inputs -buffer_cell [lindex [split $::env(SYNTH_BUFFER_CELL) "/"] 0]
 }
 
 if { $::env(DESIGN_REPAIR_BUFFER_OUTPUT_PORTS) } {
-    buffer_ports -outputs
+    buffer_ports -outputs -buffer_cell [lindex [split $::env(SYNTH_BUFFER_CELL) "/"] 0]
 }
 
 report_floating_nets -verbose
