@@ -97,14 +97,25 @@ class FABulousPower(OdbpyStep):
         return os.path.join(os.path.dirname(__file__), "scripts", "odb_power.py")
 
     def get_command(self) -> List[str]:
-        return super().get_command() + [
-            "--metal-layer-name",
-            self.config["RT_MAX_LAYER"],
-            "--power-name",
-            self.config["VDD_PIN"],
-            "--ground-name",
-            self.config["GND_PIN"],
-        ]
+        vdd_pins = []
+        if self.config["VDD_NETS"] is None:
+            vdd_pins.append("--power-names")
+            vdd_pins.append(self.config["VDD_PIN"])
+        else:
+            for power_net in self.config["VDD_NETS"]:
+                vdd_pins.append("--power-names")
+                vdd_pins.append(power_net)
+
+        gnd_pins = []
+        if self.config["GND_NETS"] is None:
+            gnd_pins.append("--ground-names")
+            gnd_pins.append(self.config["GND_PIN"])
+        else:
+            for ground_net in self.config["GND_NETS"]:
+                gnd_pins.append("--ground-names")
+                gnd_pins.append(ground_net)
+
+        return super().get_command() + vdd_pins + gnd_pins
 
 
 @Step.factory.register()
