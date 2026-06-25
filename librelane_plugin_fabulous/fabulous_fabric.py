@@ -756,7 +756,9 @@ class FABulousFabric(Classic):
             selected_liberty_files = None
 
             # Find the liberty files for the corner
-            for corner_pattern, liberty_files in self.config["LIB"].items():
+            for corner_pattern, liberty_files in self.config.get(
+                "LIB", self.config["CELL_LIBS"]
+            ).items():
                 if fnmatch.fnmatch(corner, corner_pattern):
                     info(f"Matched {corner_pattern} with {corner} corner.")
                     selected_liberty_files = liberty_files
