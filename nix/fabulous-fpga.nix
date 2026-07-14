@@ -17,6 +17,7 @@
   pyyaml,
   click,
   numpy,
+  dill,
   pymoo,
   networkx,
   pick,
@@ -66,6 +67,7 @@ let
       pyyaml
       click
       numpy
+      dill
       pymoo
       networkx
       pick
