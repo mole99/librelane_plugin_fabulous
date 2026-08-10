@@ -707,7 +707,12 @@ class FABulousTile(Classic):
                     self.config["FABULOUS_TILE_DIR"], tile.name, f"{tile.name}.v"
                 )
                 self.writer.outFileName = pathlib.Path(tile_netlist_path)
-                generateTile(self.writer, self.fabric, tile)
+                generateTile(
+                    self.writer,
+                    tile,
+                    disable_user_clk=True,
+                    config_bit_mode=config_bit_mode,
+                )
                 verilog_files.append(tile_netlist_path)
                 initial_state = State(
                     copying=initial_state,
