@@ -51,7 +51,7 @@ from fabulous.fabric_generator.gen_fabric.gen_tile import (
     generateSuperTile,
     generateTile,
 )
-from fabulous.fabric_definition.define import IO, Side
+from fabulous.fabric_definition.define import ConfigBitMode, MultiplexerStyle, IO, Side
 from fabulous.fabric_definition.port import Port
 from fabulous.fabulous_settings import init_context
 
@@ -270,6 +270,21 @@ class FABulousTile(Classic):
             default=False,
         ),
         Variable(
+            "FABULOUS_CONFIG_BIT_MODE",
+            ConfigBitMode,
+            "Config-bit storage mode used when regenerating the tile switch "
+            "matrix and config memory. Must match the parent fabric; the "
+            "standalone tile flow has no fabric to read it from.",
+            default=ConfigBitMode.FRAME_BASED,
+        ),
+        Variable(
+            "FABULOUS_MULTIPLEXER_STYLE",
+            MultiplexerStyle,
+            "Multiplexer implementation style used when regenerating the tile "
+            "switch matrix. Must match the parent fabric.",
+            default=MultiplexerStyle.CUSTOM,
+        ),
+        Variable(
             "FABULOUS_TILE_DIR",
             Path,
             """
@@ -289,6 +304,9 @@ class FABulousTile(Classic):
         info(f"FABULOUS_TILE_DIR: {self.config['FABULOUS_TILE_DIR']}")
 
         verilog_files = self.config["VERILOG_FILES"]
+
+        config_bit_mode = ConfigBitMode(self.config["FABULOUS_CONFIG_BIT_MODE"])
+        multiplexer_style = MultiplexerStyle(self.config["FABULOUS_MULTIPLEXER_STYLE"])
 
         # Create a dummy fabric
         # TODO FABulous should be able to create tiles without a fabric
@@ -389,7 +407,11 @@ class FABulousTile(Classic):
             )
             self.writer.outFileName = pathlib.Path(switch_matrix_path)
             genTileSwitchMatrix(
-                self.writer, self.fabric, tile, switch_matrix_debug_signal=False
+                self.writer,
+                tile,
+                switch_matrix_debug_signal=False,
+                config_bit_mode=config_bit_mode,
+                multiplexer_style=multiplexer_style,
             )
 
             verilog_files.append(switch_matrix_path)
@@ -411,8 +433,8 @@ class FABulousTile(Classic):
             self.writer.outFileName = pathlib.Path(config_mem_path)
             generateConfigMem(
                 self.writer,
-                self.fabric,
-                tile,
+                tile.name,
+                tile.globalConfigBits,
                 pathlib.Path(
                     os.path.join(
                         self.config["FABULOUS_TILE_DIR"],
@@ -445,7 +467,12 @@ class FABulousTile(Classic):
                 self.config["FABULOUS_TILE_DIR"], f"{self.config['DESIGN_NAME']}.v"
             )
             self.writer.outFileName = pathlib.Path(tile_netlist_path)
-            generateTile(self.writer, self.fabric, tile)
+            generateTile(
+                self.writer,
+                tile,
+                disable_user_clk=True,
+                config_bit_mode=config_bit_mode,
+            )
             verilog_files.append(tile_netlist_path)
             initial_state = State(
                 copying=initial_state,
@@ -618,7 +645,11 @@ class FABulousTile(Classic):
                 )
                 self.writer.outFileName = pathlib.Path(switch_matrix_path)
                 genTileSwitchMatrix(
-                    self.writer, self.fabric, tile, switch_matrix_debug_signal=False
+                    self.writer,
+                    tile,
+                    switch_matrix_debug_signal=False,
+                    config_bit_mode=config_bit_mode,
+                    multiplexer_style=multiplexer_style,
                 )
                 verilog_files.append(switch_matrix_path)
                 initial_state = State(
@@ -640,8 +671,8 @@ class FABulousTile(Classic):
                 self.writer.outFileName = pathlib.Path(config_mem_path)
                 generateConfigMem(
                     self.writer,
-                    self.fabric,
-                    tile,
+                    tile.name,
+                    tile.globalConfigBits,
                     pathlib.Path(
                         os.path.join(
                             self.config["FABULOUS_TILE_DIR"],
@@ -701,7 +732,12 @@ class FABulousTile(Classic):
                 self.config["FABULOUS_TILE_DIR"], f"{self.config['DESIGN_NAME']}.v"
             )
             self.writer.outFileName = pathlib.Path(tile_netlist_path)
-            generateSuperTile(self.writer, self.fabric, supertile)
+            generateSuperTile(
+                self.writer,
+                supertile,
+                disable_user_clk=True,
+                config_bit_mode=config_bit_mode,
+            )
             info(f"Generated tile {self.config['DESIGN_NAME']}")
             verilog_files.append(tile_netlist_path)
             initial_state = State(
