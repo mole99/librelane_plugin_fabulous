@@ -43,7 +43,7 @@ from librelane.steps.common_variables import (
 
 from fabulous.fabric_generator.parser import parse_csv
 from fabulous.fabric_generator.gen_fabric.gen_switchmatrix import genTileSwitchMatrix
-from fabulous.fabric_generator.gen_fabric.gen_configmem import generateConfigMem
+from fabulous.fabric_generator.gen_fabric.gen_configmem import generate_tile_config_mem
 from fabulous.fabric_generator.code_generator.code_generator_Verilog import (
     VerilogCodeGenerator,
 )
@@ -53,6 +53,7 @@ from fabulous.fabric_generator.gen_fabric.gen_tile import (
 )
 from fabulous.fabric_definition.define import ConfigBitMode, MultiplexerStyle, IO, Side
 from fabulous.fabric_definition.port import Port
+from fabulous.fabric_definition.configmem import ConfigMem
 from fabulous.fabulous_settings import init_context
 
 __dir__ = os.path.dirname(os.path.abspath(__file__))
@@ -410,7 +411,6 @@ class FABulousTile(Classic):
                 self.writer,
                 tile,
                 switch_matrix_debug_signal=False,
-                config_bit_mode=config_bit_mode,
                 multiplexer_style=multiplexer_style,
             )
 
@@ -431,17 +431,7 @@ class FABulousTile(Classic):
                 f"{self.config['DESIGN_NAME']}_ConfigMem.v",
             )
             self.writer.outFileName = pathlib.Path(config_mem_path)
-            generateConfigMem(
-                self.writer,
-                tile.name,
-                tile.globalConfigBits,
-                pathlib.Path(
-                    os.path.join(
-                        self.config["FABULOUS_TILE_DIR"],
-                        f"{self.config['DESIGN_NAME']}_ConfigMem.csv",
-                    )
-                ),
-            )
+            generate_tile_config_mem(self.writer, tile, config_bit_mode=config_bit_mode)
 
             # Termination tiles have no config bits, therefore no config mem is generated
             if pathlib.Path(
@@ -514,17 +504,17 @@ class FABulousTile(Classic):
                     north_ports.extend(bel.externalOutput)
 
             for port in [
-                port for port in tile.getNorthSidePorts() if port.inOut == IO.OUTPUT
+                port for port in tile.getNorthSidePorts() if port.io_direction == IO.OUTPUT
             ]:
-                if port.wireCount * abs(port.yOffset) > 1:
+                if port.wire_count * abs(port.y_offset) > 1:
                     north_ports.append(f"{port.name}\\[.*\\]")
                 else:
                     north_ports.append(port.name)
 
             for port in [
-                port for port in tile.getNorthSidePorts() if port.inOut == IO.INPUT
+                port for port in tile.getNorthSidePorts() if port.io_direction == IO.INPUT
             ]:
-                if port.wireCount * abs(port.yOffset) > 1:
+                if port.wire_count * abs(port.y_offset) > 1:
                     north_ports.append(f"{port.name}\\[.*\\]")
                 else:
                     north_ports.append(port.name)
@@ -545,17 +535,17 @@ class FABulousTile(Classic):
                     east_ports.extend(bel.externalOutput)
 
             for port in [
-                port for port in tile.getEastSidePorts() if port.inOut == IO.INPUT
+                port for port in tile.getEastSidePorts() if port.io_direction == IO.INPUT
             ]:
-                if port.wireCount * abs(port.xOffset) > 1:
+                if port.wire_count * abs(port.x_offset) > 1:
                     east_ports.append(f"{port.name}\\[.*\\]")
                 else:
                     east_ports.append(port.name)
 
             for port in [
-                port for port in tile.getEastSidePorts() if port.inOut == IO.OUTPUT
+                port for port in tile.getEastSidePorts() if port.io_direction == IO.OUTPUT
             ]:
-                if port.wireCount * abs(port.xOffset) > 1:
+                if port.wire_count * abs(port.x_offset) > 1:
                     east_ports.append(f"{port.name}\\[.*\\]")
                 else:
                     east_ports.append(port.name)
@@ -576,17 +566,17 @@ class FABulousTile(Classic):
                     south_ports.extend(bel.externalOutput)
 
             for port in [
-                port for port in tile.getSouthSidePorts() if port.inOut == IO.INPUT
+                port for port in tile.getSouthSidePorts() if port.io_direction == IO.INPUT
             ]:
-                if port.wireCount * abs(port.yOffset) > 1:
+                if port.wire_count * abs(port.y_offset) > 1:
                     south_ports.append(f"{port.name}\\[.*\\]")
                 else:
                     south_ports.append(port.name)
 
             for port in [
-                port for port in tile.getSouthSidePorts() if port.inOut == IO.OUTPUT
+                port for port in tile.getSouthSidePorts() if port.io_direction == IO.OUTPUT
             ]:
-                if port.wireCount * abs(port.yOffset) > 1:
+                if port.wire_count * abs(port.y_offset) > 1:
                     south_ports.append(f"{port.name}\\[.*\\]")
                 else:
                     south_ports.append(port.name)
@@ -607,17 +597,17 @@ class FABulousTile(Classic):
                     west_ports.extend(bel.externalOutput)
 
             for port in [
-                port for port in tile.getWestSidePorts() if port.inOut == IO.OUTPUT
+                port for port in tile.getWestSidePorts() if port.io_direction == IO.OUTPUT
             ]:
-                if port.wireCount * abs(port.xOffset) > 1:
+                if port.wire_count * abs(port.x_offset) > 1:
                     west_ports.append(f"{port.name}\\[.*\\]")
                 else:
                     west_ports.append(port.name)
 
             for port in [
-                port for port in tile.getWestSidePorts() if port.inOut == IO.INPUT
+                port for port in tile.getWestSidePorts() if port.io_direction == IO.INPUT
             ]:
-                if port.wireCount * abs(port.xOffset) > 1:
+                if port.wire_count * abs(port.x_offset) > 1:
                     west_ports.append(f"{port.name}\\[.*\\]")
                 else:
                     west_ports.append(port.name)
@@ -633,7 +623,7 @@ class FABulousTile(Classic):
         else:
 
             # Get the supertile
-            supertile = self.fabric.superTileDic[self.config["DESIGN_NAME"]]
+            supertile = self.fabric.getSuperTileByName(self.config["DESIGN_NAME"])
 
             for tile in supertile.tiles:
 
@@ -648,7 +638,6 @@ class FABulousTile(Classic):
                     self.writer,
                     tile,
                     switch_matrix_debug_signal=False,
-                    config_bit_mode=config_bit_mode,
                     multiplexer_style=multiplexer_style,
                 )
                 verilog_files.append(switch_matrix_path)
@@ -669,18 +658,18 @@ class FABulousTile(Classic):
                     f"{tile.name}_ConfigMem.v",
                 )
                 self.writer.outFileName = pathlib.Path(config_mem_path)
-                generateConfigMem(
-                    self.writer,
-                    tile.name,
-                    tile.globalConfigBits,
-                    pathlib.Path(
-                        os.path.join(
-                            self.config["FABULOUS_TILE_DIR"],
-                            tile.name,
-                            f"{tile.name}_ConfigMem.csv",
-                        )
-                    ),
+
+                # TODO: for some reason the tiles of supertiles are not properly initialized:
+                #       config_mem is missing frame_bits_per_row/max_frames_per_col, so we set 
+                #       it here. parseFabricCSV is probably the root of the evil
+                tile.config_mem = ConfigMem.default(
+                    0,
+                    frame_bits_per_row=32,
+                    max_frames_per_col=20,
+                    source=tile.config_mem.source,
                 )
+                
+                generate_tile_config_mem(self.writer, tile, config_bit_mode=config_bit_mode)
 
                 # Termination tiles have no config bits, therefore no config mem is generated
                 if pathlib.Path(
@@ -753,7 +742,7 @@ class FABulousTile(Classic):
                 },
             )
 
-            portsAround = supertile.getPortsAroundTile()
+            portsAround = supertile.get_ports_around_tile()
             info(f"SuperTile portsAround: {portsAround}")
 
             port_sides_dict = {
@@ -815,16 +804,16 @@ class FABulousTile(Classic):
                                 # First list all port_direction_first ports
                                 for port in ports_side:
                                     wire_offset = (
-                                        abs(port.yOffset)
+                                        abs(port.y_offset)
                                         if side == Side.NORTH or side == Side.SOUTH
-                                        else abs(port.xOffset)
+                                        else abs(port.x_offset)
                                     )
 
                                     if (
-                                        port.sideOfTile == side
-                                        and port.inOut == port_direction_first
+                                        port.side_of_tile == side
+                                        and port.io_direction == port_direction_first
                                     ):
-                                        if port.wireCount * wire_offset > 1:
+                                        if port.wire_count * wire_offset > 1:
                                             ports.append(f"{prefix}{port.name}\\[.*\\]")
                                         else:
                                             ports.append(prefix + port.name)
@@ -832,16 +821,16 @@ class FABulousTile(Classic):
                                 # Then the port_direction_second ports
                                 for port in ports_side:
                                     wire_offset = (
-                                        abs(port.yOffset)
+                                        abs(port.y_offset)
                                         if side == Side.NORTH or side == Side.SOUTH
-                                        else abs(port.xOffset)
+                                        else abs(port.x_offset)
                                     )
 
                                     if (
-                                        port.sideOfTile == side
-                                        and port.inOut == port_direction_second
+                                        port.side_of_tile == side
+                                        and port.io_direction == port_direction_second
                                     ):
-                                        if port.wireCount * wire_offset > 1:
+                                        if port.wire_count * wire_offset > 1:
                                             ports.append(f"{prefix}{port.name}\\[.*\\]")
                                         else:
                                             ports.append(prefix + port.name)

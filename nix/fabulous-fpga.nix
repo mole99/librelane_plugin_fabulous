@@ -24,8 +24,8 @@
   sdf-timing,
   jinja2,
   version ? "2.0.0",
-  rev ? "a4d391f609b5a1dd5c934e6ddf0911acddee5f10",
-  sha256 ? "sha256-dLgdebeCqdDsGjvhjITgVXEnxTNRA0LlMVZ1VhlfVPo=",
+  rev ? "9e2c46bfbd211f5492d71ab286cc89216f4e5697",
+  sha256 ? "sha256-yIa/TJA8GHYdQ8Sj4wvPKMRPr4gNd7ddJCtrWK9v+Ok=",
 }:
 let
 
@@ -96,10 +96,11 @@ let
         --replace-fail "fabulous = \"fabulous.fabulous:main\"" ""
 
       substituteInPlace pyproject.toml \
-        --replace-fail "\"librelane>=3.0.0\"," "" \
-        --replace-fail "\"ciel>=2.4.0\"," "" \
+        --replace-fail "\"librelane>=3.1.0.dev4\"," "" \
+        --replace-fail "\"ciel>=3.0.0\"," "" \
         --replace-fail "\"go-task-bin>=3.40.0\"," "" \
-        --replace-fail "\"setuptools>=83.0.0\"" "\"setuptools>=64\""
+        --replace-fail "\"setuptools>=83.0.0\"" "\"setuptools>=64\"" \
+        --replace-fail "bitarray>=3.10.0" "setuptools>=3.7.1"
       
       substituteInPlace pyproject.toml \
         --replace-fail "build_py = \"build_hooks.BuildPyWithFabulousNix\"" ""
