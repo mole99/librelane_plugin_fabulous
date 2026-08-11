@@ -24,8 +24,8 @@
   sdf-timing,
   jinja2,
   version ? "2.0.0",
-  rev ? "a4d391f609b5a1dd5c934e6ddf0911acddee5f10",
-  sha256 ? "sha256-dLgdebeCqdDsGjvhjITgVXEnxTNRA0LlMVZ1VhlfVPo=",
+  rev ? "c35d0687cf405a146cbd6e2c96805fe24da2dfd5",
+  sha256 ? "sha256-9G4Ats4MoHjMMHx9Uk9M7yGgXPufvc3AEqbmfh6s/Qg=",
 }:
 let
 
@@ -35,7 +35,7 @@ let
     inherit version;
 
     src = fetchFromGitHub {
-      owner = "FPGA-Research";
+      owner = "hausdinge";
       repo = "FABulous";
       rev = if rev == null then version else rev;
       inherit sha256;

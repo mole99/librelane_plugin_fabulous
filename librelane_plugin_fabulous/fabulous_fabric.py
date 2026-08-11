@@ -52,6 +52,7 @@ from fabulous.fabric_cad.gen_bitstream_spec import generateBitstreamSpec
 from fabulous.fabric_cad.timing_model.models import (
     TimingModelConfig,
     TimingModelMode,
+    TimingModelTarget,
     TimingModelSynthTools,
     TimingModelStaTools,
 )
@@ -172,7 +173,7 @@ DesignFormat(
 DesignFormat(
     "fabulous/.FABulous",
     "txt",
-    "FABulous Basic Element",
+    "FABulous Basic Elements",
     alts=["FABULOUS_BELS"],
 ).register()
 
@@ -181,6 +182,14 @@ DesignFormat(
     "v2.txt",
     "FABulous Basic Elements v2",
     alts=["FABULOUS_BELS_V2"],
+).register()
+
+DesignFormat(
+    "fabulous/.FABulous",
+    "v3.txt",
+    "FABulous Basic Elements v3",
+    alts=["FABULOUS_BELS_V3"],
+    multiple=True,
 ).register()
 
 DesignFormat(
@@ -869,12 +878,18 @@ class FABulousFabric(Classic):
                 custom_per_tile_source_files=custom_per_tile_source_files,
             )
 
+            target = TimingModelTarget.BOTH
+            # target = TimingModelTarget(target)
             ftmi = FABulousTimingModelInterface(config=iconfig, fabric=self.fabric)
 
-            model_gen_npnr.writeNextpnrPipFile(
+            model_gen_npnr.write_nextpnr_timing_files(
                 fabric=self.fabric,
-                outputFile=Path(os.path.join(self.run_dir, f"pips.{corner}.txt")),
+                pip_output_file=Path(os.path.join(self.run_dir, f"pips.{corner}.txt")),
+                bel_output_file=Path(
+                    os.path.join(self.run_dir, f"bel.{corner}.v3.txt")
+                ),
                 delay_model=ftmi,
+                target=target,
             )
 
             # Unfortunately, this is already too late...
@@ -882,16 +897,26 @@ class FABulousFabric(Classic):
                 copying=final_state,
                 overrides={
                     "FABULOUS_PIPS": final_state.get("FABULOUS_PIPS", [])
-                    + [Path(os.path.join(self.run_dir, f"pips.{corner}.txt"))]
+                    + [Path(os.path.join(self.run_dir, f"pips.{corner}.txt"))],
+                    "FABULOUS_BELS_V3": final_state.get("FABULOUS_BELS_V3", [])
+                    + [Path(os.path.join(self.run_dir, f"bel.{corner}.v3.txt"))],
                 },
             )
 
-            # We need to copy the pip file manually
+            # We need to copy these files manually
             shutil.copyfile(
                 Path(os.path.join(self.run_dir, f"pips.{corner}.txt")),
                 Path(
                     os.path.join(
                         self.run_dir, f"final/fabulous/.FABulous/pips.{corner}.txt"
+                    )
+                ),
+            )
+            shutil.copyfile(
+                Path(os.path.join(self.run_dir, f"bel.{corner}.v3.txt")),
+                Path(
+                    os.path.join(
+                        self.run_dir, f"final/fabulous/.FABulous/bel.{corner}.v3.txt"
                     )
                 ),
             )
