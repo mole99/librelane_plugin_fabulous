@@ -50,6 +50,7 @@ let
       #./patches/fabulous/fix_supertile_framedata_o.patch
       ./patches/fabulous/ignore_destination.patch
       ./patches/fabulous/keep_tiles.patch
+      ./patches/fabulous/keep_hierarchy.patch
       ./patches/fabulous/emulation_rows.patch
     ];
 

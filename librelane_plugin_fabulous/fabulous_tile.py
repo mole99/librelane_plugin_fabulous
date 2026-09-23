@@ -251,6 +251,9 @@ class FABulousTile(Classic):
         ("OpenROAD.RepairDesign*", None),
         # But do add buffers if explicitly wished
         ("+Odb.ApplyDEFTemplate", AddBuffers),
+        
+        # TODO: Test
+        #("Checker.YosysSynthChecks", None),
     ]
 
     config_vars = Classic.config_vars + [

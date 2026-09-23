@@ -1,0 +1,115 @@
+diff --git a/fabulous/fabric_generator/gen_fabric/gen_configmem.py b/fabulous/fabric_generator/gen_fabric/gen_configmem.py
+index 0cc2127..0308723 100644
+--- a/fabulous/fabric_generator/gen_fabric/gen_configmem.py
++++ b/fabulous/fabric_generator/gen_fabric/gen_configmem.py
+@@ -231,7 +231,7 @@ def generateConfigMem(
+     writer.addPortVector("FrameData", IO.INPUT, "FrameBitsPerRow - 1", indentLevel=2)
+     writer.addPortVector("FrameStrobe", IO.INPUT, "MaxFramesPerCol - 1", indentLevel=2)
+     writer.addPortVector("ConfigBits", IO.OUTPUT, "NoConfigBits - 1", indentLevel=2)
+-    writer.addPortVector("ConfigBits_N", IO.OUTPUT, "NoConfigBits - 1", indentLevel=2)
++    #writer.addPortVector("ConfigBits_N", IO.OUTPUT, "NoConfigBits - 1", indentLevel=2)
+     writer.addPortEnd(indentLevel=1)
+     writer.addHeaderEnd(f"{name}_ConfigMem")
+     writer.addNewLine()
+@@ -272,7 +272,7 @@ def generateConfigMem(
+                         ("D", f"FrameData[{frame_bits_per_row - 1 - k}]"),
+                         ("E", f"FrameStrobe[{i.frameIndex}]"),
+                         ("Q", f"ConfigBits[{i.configBitRanges[counter]}]"),
+-                        ("QN", f"ConfigBits_N[{i.configBitRanges[counter]}]"),
++                        #("QN", f"ConfigBits_N[{i.configBitRanges[counter]}]"),
+                     ],
+                 )
+                 counter += 1
+diff --git a/fabulous/fabric_generator/gen_fabric/gen_switchmatrix.py b/fabulous/fabric_generator/gen_fabric/gen_switchmatrix.py
+index fd68373..5550b40 100644
+--- a/fabulous/fabric_generator/gen_fabric/gen_switchmatrix.py
++++ b/fabulous/fabric_generator/gen_fabric/gen_switchmatrix.py
+@@ -363,12 +363,12 @@ def _gen_switch_matrix_body(
+                         portsPairs.append(
+                             (f"S{i}", f"ConfigBits[{configBitstreamPosition}+{i}]")
+                         )
+-                        portsPairs.append(
+-                            (
+-                                f"S{i}N",
+-                                f"ConfigBits_N[{configBitstreamPosition}+{i}]",
+-                            )
+-                        )
++                        #portsPairs.append(
++                        #    (
++                        #        f"S{i}N",
++                        #        f"ConfigBits_N[{configBitstreamPosition}+{i}]",
++                        #    )
++                        #)
+ 
+             portsPairs.append(("X", f"{portName}"))
+ 
+diff --git a/fabulous/fabric_generator/gen_fabric/gen_tile.py b/fabulous/fabric_generator/gen_fabric/gen_tile.py
+index 79449c9..96bed00 100644
+--- a/fabulous/fabric_generator/gen_fabric/gen_tile.py
++++ b/fabulous/fabric_generator/gen_fabric/gen_tile.py
+@@ -275,7 +275,7 @@ def generateTile(
+     # all the signal wire need to declare first for compatibility with VHDL
+     if tile.globalConfigBits > 0:
+         writer.addConnectionVector("ConfigBits", "NoConfigBits-1", 0)
+-        writer.addConnectionVector("ConfigBits_N", "NoConfigBits-1", 0)
++        #writer.addConnectionVector("ConfigBits_N", "NoConfigBits-1", 0)
+ 
+     writer.addNewLine()
+     writer.addComment("Connection for outgoing wires", onNewLine=True)
+@@ -392,7 +392,7 @@ def generateTile(
+         writer.addComment("CONFout is from tile entity")
+ 
+     if config_bit_mode == ConfigBitMode.FRAME_BASED and tile.globalConfigBits > 0:
+-        writer.addComment("configuration storage latches", onNewLine=True)
++        writer.addComment("configuration storage latches\n (* keep_hierarchy *)", onNewLine=True)
+         writer.addInstantiation(
+             compName=f"{tile.name}_ConfigMem",
+             compInsName=f"Inst_{tile.name}_ConfigMem",
+@@ -400,7 +400,7 @@ def generateTile(
+                 ("FrameData", "FrameData"),
+                 ("FrameStrobe", "FrameStrobe"),
+                 ("ConfigBits", "ConfigBits"),
+-                ("ConfigBits_N", "ConfigBits_N"),
++                #("ConfigBits_N", "ConfigBits_N"),
+             ],
+             emulateParamPairs=[("Emulate_Bitstream", "Emulate_Bitstream")],
+         )
+@@ -473,6 +473,7 @@ def generateTile(
+             portsPairs.append(("CONFout", f"conf_data({belCounter + 1})"))
+             portsPairs.append(("CLK", "CLK"))
+ 
++        writer.addComment("BEL instance\n (* keep_hierarchy *)", onNewLine=True)
+         writer.addInstantiation(
+             compName=bel.name,
+             compInsName=f"Inst_{bel.prefix}{bel.name}",
+@@ -579,13 +580,14 @@ def generateTile(
+                 f"ConfigBits[{tile.globalConfigBits}-1:{belConfigBitsCounter}]",
+             )
+         )
+-        portsPairs.append(
+-            (
+-                "ConfigBits_N",
+-                f"ConfigBits_N[{tile.globalConfigBits}-1:{belConfigBitsCounter}]",
+-            )
+-        )
+-
++        #portsPairs.append(
++        #    (
++        #        "ConfigBits_N",
++        #        f"ConfigBits_N[{tile.globalConfigBits}-1:{belConfigBitsCounter}]",
++        #    )
++        #)
++
++    writer.addComment("switch matrix instance\n (* keep_hierarchy *)", onNewLine=True)
+     writer.addInstantiation(
+         compName=f"{tile.name}_switch_matrix",
+         compInsName=f"Inst_{tile.name}_switch_matrix",
+@@ -1047,7 +1049,7 @@ def generateSuperTile(
+                 ("FrameData", cm_frame_data),
+                 ("FrameStrobe", cm_frame_strobe),
+                 ("ConfigBits", f"ST_ConfigBits[{st_config_bits}-1:0]"),
+-                ("ConfigBits_N", f"ST_ConfigBits_N[{st_config_bits}-1:0]"),
++                #("ConfigBits_N", f"ST_ConfigBits_N[{st_config_bits}-1:0]"),
+             ],
+             # The supertile config bits live in free slots of the master tile's
+             # frame space, so in emulation they are preloaded from the master
