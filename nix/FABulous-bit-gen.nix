@@ -5,9 +5,9 @@
   setuptools-scm,
   loguru,
   fabulous-fasm,
-  version ? "v0.3.1",
+  version ? "v0.4.0",
   rev ? null,
-  sha256 ? "sha256-X9hWHboI9XCbI5TQeZ8mBX4N9enzPGFpWHxR3I2OqQ8=",
+  sha256 ? "sha256-tKIUNQZoQX4snluFHvVYk3iSFMkHnkZJH/PIbc3MZnw=",
 }:
 let
 
