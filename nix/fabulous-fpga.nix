@@ -51,6 +51,7 @@ let
       ./patches/fabulous/ignore_destination.patch
       ./patches/fabulous/keep_tiles.patch
       ./patches/fabulous/emulation_rows.patch
+      ./patches/fabulous/dont_sort_ports.patch
     ];
 
     dependencies = [

@@ -1,0 +1,23 @@
+diff --git a/fabulous/fabric_definition/fabric.py b/fabulous/fabric_definition/fabric.py
+index a72da0f8..5717deae 100644
+--- a/fabulous/fabric_definition/fabric.py
++++ b/fabulous/fabric_definition/fabric.py
+@@ -286,12 +286,12 @@ class Fabric:
+             )
+             return port.wire_direction, source
+ 
+-        for tile in [
+-            *self.tileDic.values(),
+-            *(t for row in self.tile for t in row if t is not None),
+-            *(t for st in self.superTileDic.values() for t in st.tiles),
+-        ]:
+-            tile.portsInfo = sorted(tile.portsInfo, key=channel_key)
++        #for tile in [
++        #    *self.tileDic.values(),
++        #    *(t for row in self.tile for t in row if t is not None),
++        #    *(t for st in self.superTileDic.values() for t in st.tiles),
++        #]:
++        #    tile.portsInfo = sorted(tile.portsInfo, key=channel_key)
+ 
+         for y, row in enumerate(self.tile):
+             for x, tile in enumerate(row):
