@@ -292,6 +292,14 @@ class FABulousTile(Classic):
             Path to the tile directory where the tile CSV file is located.
             """,
         ),
+        Variable(
+            "FABULOUS_MERGE_EXTERNAL_SIDE",
+            bool,
+            """
+            Merge the pin segments on FABULOUS_EXTERNAL_SIDE. This makes it possible to fit more pins on one side.
+            """,
+            default=False,
+        ),
     ]
 
     def run(
@@ -884,6 +892,29 @@ class FABulousTile(Classic):
         info(f"east_ports_sides: {east_ports_sides}")
         info(f"south_ports_sides: {south_ports_sides}")
         info(f"west_ports_sides: {west_ports_sides}")
+        
+        # A slight hack: merge the pin segments of the
+        # external side to fit in more pins.
+        if self.config["FABULOUS_MERGE_EXTERNAL_SIDE"]:
+            merged_side = []
+
+            # Super ugly - clean up!
+            if self.config["FABULOUS_EXTERNAL_SIDE"] == "N":
+                for side in north_ports_sides:
+                    merged_side.extend(side)
+                north_ports_sides = [merged_side]
+            if self.config["FABULOUS_EXTERNAL_SIDE"] == "E":
+                for side in east_ports_sides:
+                    merged_side.extend(side)
+                east_ports_sides = [merged_side]
+            if self.config["FABULOUS_EXTERNAL_SIDE"] == "S":
+                for side in south_ports_sides:
+                    merged_side.extend(side)
+                south_ports_sides = [merged_side]
+            if self.config["FABULOUS_EXTERNAL_SIDE"] == "W":
+                for side in west_ports_sides:
+                    merged_side.extend(side)
+                west_ports_sides = [merged_side]
 
         """
         # Create port files that can be read by the io_place script
