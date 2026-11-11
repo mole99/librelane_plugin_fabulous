@@ -247,16 +247,13 @@ def io_place(
     #S|#N|#E|#W
     """
     config_file_name = config
-    micron_in_units = reader.dbunits
+    dbus_per_micron = reader.dbunits
 
-    H_EXTENSION = int(micron_in_units * hor_extension)
-    V_EXTENSION = int(micron_in_units * ver_extension)
+    H_EXTENSION = int(dbus_per_micron * hor_extension)
+    V_EXTENSION = int(dbus_per_micron * ver_extension)
 
-    if H_EXTENSION < 0:
-        H_EXTENSION = 0
-
-    if V_EXTENSION < 0:
-        V_EXTENSION = 0
+    H_EXTENSION = max(H_EXTENSION, 0)
+    V_EXTENSION = max(V_EXTENSION, 0)
 
     H_LAYER = reader.tech.findLayer(hor_layer)
     V_LAYER = reader.tech.findLayer(ver_layer)
@@ -265,28 +262,23 @@ def io_place(
     V_WIDTH = int(Decimal(ver_width_mult) * V_LAYER.getWidth())
 
     if hor_length is not None:
-        H_LENGTH = int(micron_in_units * hor_length)
+        H_LENGTH = int(dbus_per_micron * hor_length)
     else:
         H_LENGTH = max(
-            int(
-                math.ceil(
-                    H_LAYER.getArea() * micron_in_units * micron_in_units / H_WIDTH
-                )
-            ),
+            int(math.ceil(H_LAYER.getArea() / H_WIDTH)),
             H_WIDTH,
         )
 
     if ver_length is not None:
-        V_LENGTH = int(micron_in_units * ver_length)
+        V_LENGTH = int(dbus_per_micron * ver_length)
     else:
         V_LENGTH = max(
-            int(
-                math.ceil(
-                    V_LAYER.getArea() * micron_in_units * micron_in_units / V_WIDTH
-                )
-            ),
+            int(math.ceil(V_LAYER.getArea() / V_WIDTH)),
             V_WIDTH,
         )
+
+    V_LENGTH = V_WIDTH
+    H_LENGTH = H_WIDTH
 
     # read config + calculate minima
     config_file_str = open(config_file_name, "r", encoding="utf8").read()
@@ -297,7 +289,7 @@ def io_place(
         print(info_by_side)
     except ValueError as e:
         print(f"An exception occurred: {e}")
-        exit(os.EX_DATAERR)
+        sys.exit(os.EX_DATAERR)
     """
 
     with open(config_file_name, "r", encoding="utf8") as file:
@@ -427,7 +419,7 @@ def io_place(
 
     if mismatches_found:
         print("Critical mismatches found.")
-        exit(os.EX_DATAERR)
+        sys.exit(os.EX_DATAERR)
 
     if len(not_in_config) > 0:
         print("Assigning random sides to unmatched pins…")
@@ -592,7 +584,7 @@ def io_place(
     for side, segments in pin_placement.items():
 
         for segment_n, segment in enumerate(segments):
-            min_distance = info_by_side[side][segment_n].min_distance * micron_in_units
+            min_distance = info_by_side[side][segment_n].min_distance * dbus_per_micron
 
             print(side)
             # print(len(h_tracks[segment_n]))
@@ -704,7 +696,6 @@ def io_place(
                         x = BLOCK_LL_X - H_EXTENSION
                     rect.moveTo(x, slot - H_WIDTH // 2)
                     odb.dbBox_create(pin_bpin, H_LAYER, *rect.ll(), *rect.ur())
-
 
 if __name__ == "__main__":
     io_place()
