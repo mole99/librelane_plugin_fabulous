@@ -12,7 +12,7 @@ from librelane.steps.step import (
     ViewsUpdate,
     MetricsUpdate,
 )
-from librelane.steps.common_variables import io_layer_variables
+from librelane.steps.common import io_layer_variables, pdn_variables
 from librelane.flows import Flow, FlowError
 from librelane.state import DesignFormat, State
 from librelane.common import Path
@@ -38,7 +38,6 @@ from librelane.steps import (
     Verilator,
     Misc,
 )
-from librelane.steps.common_variables import pdn_variables
 from librelane.common.misc import mkdirp
 
 import fabulous.fabric_cad.gen_npnr_model as model_gen_npnr

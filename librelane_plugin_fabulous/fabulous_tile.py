@@ -8,7 +8,6 @@ from librelane.steps.step import (
     ViewsUpdate,
     MetricsUpdate,
 )
-from librelane.steps.common_variables import io_layer_variables
 from librelane.flows import Flow, FlowError
 from librelane.state import DesignFormat, State
 from librelane.common import Path
@@ -34,10 +33,9 @@ from librelane.steps import (
     Verilator,
     Misc,
 )
-from librelane.steps.common_variables import (
+from librelane.steps.common import (
     grt_variables,
     io_layer_variables,
-    pdn_variables,  # TODO
     rsz_variables,
 )
 
